@@ -93,7 +93,7 @@ class PostgresUtils:
 
 
 if __name__ == "__main__":
-    pg_utils = PostgresUtils("localhost", 5432, "postgres", "monacui", "1234")
+    pg_utils = PostgresUtils("localhost", "5432", "postgres", "monacui", "1234")
     conn = pg_utils.create_connection()
     print(pg_utils.execute_sql("SELECT * FROM llm.tbl_super_store LIMIT 1;"))
     print(pg_utils.get_schema("llm", "tbl_super_store"))

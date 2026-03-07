@@ -1,10 +1,13 @@
 import os 
+from typing import Literal
 from dotenv import load_dotenv
 
 from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
-from db.postgres_utils import PostgresUtils
-from tools.data_preview_tool import DataPreviewTool
+from infra.postgres_utils import PostgresUtils
+from infra.llm.chat_openai import ChatOpenAI
+from infra.logger import Logger
 
 load_dotenv()
 
@@ -19,8 +22,8 @@ class TextToSqlService:
                  base_url=os.environ['OPENAI_BASE_URL'],
                  api_key=os.environ['OPENAI_API_KEY']):
         self.pg_util = PostgresUtils(host, port, db, user, password)
-        self.client = OpenAI(base_url=os.environ['OPENAI_BASE_URL'], 
-                    api_key=os.environ['OPENAI_API_KEY'])
+        self.chat_open_ai = ChatOpenAI('Qwen/Qwen3-30B-A3B-Instruct-2507', base_url=base_url, api_key=api_key)
+        self.logger = Logger("generate_and_execute_sql_log.jsonl")
         
     def _generate_hits(self, tbl_schema, tbl_name):
         column_infos = self.pg_util.get_schema(tbl_schema, tbl_name)
@@ -72,35 +75,59 @@ class TextToSqlService:
                 参考值如下：\n {columns_value_hits_str}
         """
         return sys_prompt
-
-
-
-
-    def text_to_sql(self, tbl_schema, tbl_name, question):
+    
+    def generate_and_execute_sql_with_retry(self, tbl_schema, tbl_name, question, max_retry = -1):
+        success = False 
+        retry_n = 0
         sys_prompt = self._generate_sys_prompt(tbl_schema, tbl_name) 
         user_prompt = f"""
             分析文本:{question}
             SQL代码:
         """
-        messages = [
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": user_prompt}
-                ]
-
+        messages: list[ChatCompletionMessageParam] = [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        data_or_err = None
+        while not success and (max_retry == -1 or retry_n < max_retry):
+            assistant_msg = self._text_to_sql(tbl_schema, tbl_name, question, messages)
+            sql = assistant_msg.content
+            exec_success, data = self.execute_sql(sql)
+            self.logger.save_jsonl({
+                "question": question,
+                "retry_n": retry_n,
+                "messages": messages,
+                "data": data
+                
+            })
+            if exec_success:
+                success = True
+                return data
+            else:
+                content = f"请根据错误信息再修改sql语句，错误信息如下：{data}"
+                messages.append(assistant_msg.model_dump())
+                messages.append({
+                    'role': 'user',
+                    'content': content
+                })
+                retry_n += 1            
+    
+    
+    
+    def _text_to_sql(self, tbl_schema, tbl_name, question, messages):
         try:
-            client = OpenAI(base_url=os.environ['OPENAI_BASE_URL'], 
-                        api_key=os.environ['OPENAI_API_KEY'])
-            resp = client.chat.completions.create(
-                model="Qwen/Qwen3-30B-A3B-Instruct-2507",
-                messages=messages,
-                temperature=0
-            )
-            sql = resp.choices[0].message.content.strip()
-            return sql
+            resp = self.chat_open_ai.chat_completions(messages=messages, temperature=0.3)
+            return self.chat_open_ai.get_message(resp)
         except Exception as e: 
             err_msg = f"LLM execution failed[{messages}]: {e}."
             print(f"{err_msg}")
             raise Exception(err_msg)
 
     def execute_sql(self, sql):
-        return self.pg_util.execute_sql(sql)
+        try:
+            result = self.pg_util.execute_sql(sql)
+            return True, result
+        except Exception as e:
+            err_msg = str(e)
+            return False, err_msg
+        

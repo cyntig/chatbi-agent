@@ -1,5 +1,5 @@
 # -*- coding: UTF-8 -*-
-from db.postgres_utils import PostgresUtils
+from infra.postgres_utils import PostgresUtils
 
 from dotenv import load_dotenv
 import os
