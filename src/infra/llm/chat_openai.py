@@ -3,12 +3,8 @@
 import os 
 from openai import OpenAI
 from dotenv import load_dotenv
-from openai.types.chat import ChatCompletion
-from typing import Literal
 
 load_dotenv()
-
-
 
 class ChatOpenAI:
     def __init__(self, 
@@ -19,34 +15,45 @@ class ChatOpenAI:
         self.client = OpenAI(base_url=base_url, api_key=api_key)
 
     
-    def chat_completions(self, 
-                         messages: list, 
-                         temperature=0.3,
-                         **kwargs) -> ChatCompletion:
+    def chat(self, 
+             prompts: list | str, 
+             **kwargs):
         try:
             response = self.client.chat.completions.create(
                 model=self._model,
-                messages=messages,
-                temperature=temperature,
+                messages=[{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts,
                 **kwargs
             )
-            return response
+            return response.choices[0].message
         except Exception as e: 
             print(e)
             err_msg = f"OpenAI failed: {e}."
             raise Exception(err_msg)
     
-    def get_choice(self, resp):
-        return resp.choices[0]
-    
-    def get_tool_calls(self, resp):
-        return self.get_message(resp).tool_calls
-    
-    def get_message(self, resp):
-        return self.get_choice(resp).message
-    
-    def get_content(self, resp) -> str:
-        return self.get_message(resp).content
+    def stream_chat(self, 
+                    prompts: list | str,
+                    **kwargs):
+        try:
+            stream = self.client.chat.completions.create(
+                model=self._model,
+                messages=[{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts,
+                stream=True,
+                **kwargs
+            )
+            for chunk in stream:
+                if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
+                    continue
+                yield chunk.choices[0].delta
+        except Exception as e:
+            print(e)
+            err_msg = f"OpenAI failed: {e}."
+            raise Exception(err_msg)
 
-    def get_finish_reason(self, resp):
-        return resp.choices[0].finish_reason
+
+if __name__ == "__main__":
+    chat_open_ai = ChatOpenAI("moonshotai/Kimi-K2-Instruct-0905")
+    # message = chat_open_ai.chat("你好呀")
+    # print(message.model_dump())
+    
+    for delta in chat_open_ai.stream_chat("你好呀"):
+        print(delta)

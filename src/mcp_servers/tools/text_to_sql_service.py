@@ -116,8 +116,8 @@ class TextToSqlService:
     
     def _text_to_sql(self, tbl_schema, tbl_name, question, messages):
         try:
-            resp = self.chat_open_ai.chat_completions(messages=messages, temperature=0.3)
-            return self.chat_open_ai.get_message(resp)
+            message = self.chat_open_ai.chat(messages, temperature=0.3)
+            return message
         except Exception as e: 
             err_msg = f"LLM execution failed[{messages}]: {e}."
             print(f"{err_msg}")
