@@ -2,6 +2,7 @@ import abc
 
 from agentstr.relays.relay import asyncio
 from fastmcp import Client
+from mcp.types import ContentBlock
 
 
 class BasicClient(abc.ABC):
@@ -34,5 +35,5 @@ class BasicClient(abc.ABC):
             )
             return result
         
-    def get_result_contents(self, result):
+    def get_result_contents(self, result) -> ContentBlock:
         return result.content
