@@ -31,16 +31,6 @@ async def on_message(message: cl.Message):
     
     user_prompt = message.content
     
-    
-    print(message.content)
-    loading = cl.Message(content='thinking')
-    await loading.send()
-    
-    
-    # counter = cl.user_session.get("counter")
-    # counter += 1
-    # cl.user_session.set("counter", counter)
-    
     # print(f"session_id: {counter}")
     
     session_id = cl.user_session.get("id") or "default"
@@ -48,10 +38,9 @@ async def on_message(message: cl.Message):
     print(session_id)
 
     agent = ChatBIAgent(llm_client, tool_register, session_id, user_prompt)
-    content = agent.run()
-    # content = "你好呀"
-    # time.sleep(50)
-    # print(f"content: {content}")
+    content = await agent.run()
+    print("start")
+    print(f"content: {content}")
+    print("end")
     
-    loading.content = content
-    await loading.update()
+    await cl.Message(content=content).send()

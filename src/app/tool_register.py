@@ -1,5 +1,7 @@
 import asyncio
+from typing import Union
 
+from app.mcp_clients.basic_client import BasicClient
 from app.mcp_clients.chart_client import ChartClient
 from app.mcp_clients.chatbi_client import ChatBIClient
 from agents.mcp.util import MCPUtil
@@ -12,6 +14,8 @@ class ToolRegister:
         self._mcp_tools = []
         self._name_to_client = {}
         self._load_tools()
+        
+        print(self._name_to_client)
 
     def _converter(self, mcp_tool):
         # schema = {
@@ -45,7 +49,7 @@ class ToolRegister:
             for mcp_tool in mcp_tools:
                 self._name_to_client[mcp_tool.name] = client
     
-    def get_client(self, tool_name):
+    def get_client(self, tool_name) -> BasicClient:
         return self._name_to_client[tool_name]
     
     def list_tools(self):

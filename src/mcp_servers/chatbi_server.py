@@ -2,22 +2,11 @@
 import os
 from dotenv import load_dotenv
 from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
 from typing import Annotated 
-from pydantic import Field
-from typing import Literal
-import pandas as pd
-from pandas.api.types import (    
-    is_numeric_dtype,
-    is_string_dtype,
-    is_datetime64_any_dtype
-    )
 
 from infra.logger import Logger
 
-from openai import OpenAI
 
-from infra.postgres_utils import PostgresUtils
 from mcp_servers.tools.data_preview_tool import DataPreviewTool
 from mcp_servers.tools.text_to_sql_service import TextToSqlService
 

@@ -53,7 +53,7 @@ class ChatBIAgent:
             self._states[self._session_id] = []
         self._states[self._session_id].append(state)
 
-    def run(self):
+    async def run(self):
         round = 0
         tools = self._tool_register.list_tools()
         
@@ -61,7 +61,7 @@ class ChatBIAgent:
 
         while self._max_round == -1 or round < self._max_round:
             round += 1
-            message = self._llmClient.chat(
+            message = await self._llmClient.async_chat(
                 self._messages,
                 temperature=0.3,
                 tools=tools,
@@ -76,8 +76,8 @@ class ChatBIAgent:
                     tool_call_name = tool_call.function.name
                     tool_call_args_str = tool_call.function.arguments
                     mcp_client = self._tool_register.get_client(tool_call_name)
-                    tool_call_result = asyncio.run(mcp_client.call_tool(
-                        tool_call_name, json.loads(tool_call_args_str)))
+                    tool_call_result = await mcp_client.call_tool(
+                        tool_call_name, json.loads(tool_call_args_str))
                     tool_call_result_context = "\n".join(
                         [context.text for context in mcp_client.get_result_contents(tool_call_result)])
 
@@ -134,17 +134,17 @@ def main(session_id: str, user_prompt: str):
     llm_client = ChatOpenAI('moonshotai/Kimi-K2-Instruct-0905')
 
     agent = ChatBIAgent(llm_client, tool_register, session_id, user_prompt)
-    print(agent.run())
+    print(asyncio.run(agent.run()))
 
 
 if __name__ == "__main__":
-#     user_prompt = """
-# 请对下面数据库表的数据形成可视化报告
-# table_schema：llm
-# table_name: tbl_super_store
-#         """.strip()
+    user_prompt = """
+请对下面数据库表的数据形成可视化报告
+table_schema：llm
+table_name: tbl_super_store
+        """.strip()
 
-    user_prompt = "仅保留第一个主题的第一个问题"
+    # user_prompt = "仅保留第一个主题的第一个问题"
     # user_prompt = "你为什么没有使用相应的工具，而是直接生成了报告，先不要着急修正错误去直接使用工具，而是回答我，是哪部分信息让你直接生成报告而不是使用工具"
 
     session_id = "1"
