@@ -45,7 +45,7 @@ class ChatOpenAI:
             return response.choices[0].message
         except Exception as e:
             print(e)
-            err_msg = f"OpenAI failed: {e}."
+            err_msg = f"AsyncOpenAI failed: {e}."
             raise Exception(err_msg)
             
     
@@ -53,20 +53,44 @@ class ChatOpenAI:
                     prompts: list | str,
                     **kwargs):
         try:
+            messages = [{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts
+            print(f"messages: {messages}")
+            
             stream = self.client.chat.completions.create(
                 model=self._model,
-                messages=[{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts,
+                messages=messages,
                 stream=True,
                 **kwargs
             )
             for chunk in stream:
-                if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
-                    continue
+                # print(chunk)
+                # if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
+                #     continue
                 yield chunk.choices[0].delta
         except Exception as e:
             print(e)
             err_msg = f"OpenAI failed: {e}."
             raise Exception(err_msg)
+        
+    async def asyn_stream_chat(self, 
+                         prompts: list | str, 
+                         **kwargs):
+        try: 
+            stream = await self.async_client.chat.completions.create(
+                model=self._model,
+                messages=[{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts,
+                stream=True,
+                **kwargs
+            )
+            async for chunk in stream: 
+                if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
+                    continue
+                yield chunk.choices[0].delta
+        except Exception as e:
+            print(e)
+            err_msg = f"AsyncOpenAI failed: {e}."
+            raise Exception(err_msg)
+            
 
 
 if __name__ == "__main__":
