@@ -255,6 +255,4 @@ tool_register = ToolRegister(ChartClient(), ChatBIClient(), MyClient())
 
 ## License
 
-MIT License
-
 Copyright (c) 2026 cyntig
