@@ -63,9 +63,9 @@ class ChatOpenAI:
                 **kwargs
             )
             for chunk in stream:
-                # print(chunk)
-                # if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
-                #     continue
+                print(chunk)
+                if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
+                    continue
                 yield chunk.choices[0].delta
         except Exception as e:
             print(e)
