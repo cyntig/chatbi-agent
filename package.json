@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@vicons/ionicons5": "^0.13.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "uuid": "^13.0.0"
+  }
+}

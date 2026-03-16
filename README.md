@@ -45,38 +45,49 @@
 
 ```
 chatbi-agent/
-├── src/
-│   ├── application.py          # Chainlit 应用入口
+├── frontend/                      # Vue 3 前端应用
+│   ├── src/                       # Vue 源代码
+│   │   ├── components/            # Vue 组件
+│   │   ├── views/                 # 页面视图
+│   │   ├── stores/                # Pinia 状态管理
+│   │   ├── services/              # API 服务层
+│   │   └── ...
+│   ├── deploy.sh                  # 部署脚本
+│   ├── mock-server.js             # Mock API 服务器
+│   ├── docker-compose.yml         # Docker 配置
+│   └── ...
+├── src/                           # 后端源代码
+│   ├── application.py             # Chainlit 应用入口
 │   ├── app/
-│   │   ├── agent.py             # ChatBI Agent 核心逻辑
-│   │   ├── tool_register.py    # 工具注册管理
-│   │   ├── basic_agent.py      # 基础 Agent 实现
-│   │   ├── schema.py            # 数据结构定义
+│   │   ├── agent.py               # ChatBI Agent 核心逻辑
+│   │   ├── tool_register.py        # 工具注册管理
+│   │   ├── basic_agent.py         # 基础 Agent 实现
+│   │   ├── schema.py              # 数据结构定义
 │   │   └── mcp_clients/
 │   │       ├── chatbi_client.py    # ChatBI MCP 客户端
 │   │       ├── chart_client.py     # 图表 MCP 客户端
-│   │       └── basic_client.py      # 基础 MCP 客户端
+│   │       └── basic_client.py    # 基础 MCP 客户端
 │   ├── mcp_servers/
-│   │   ├── chatbi_server.py     # ChatBI MCP 服务端
+│   │   ├── chatbi_server.py       # ChatBI MCP 服务端
 │   │   └── tools/
 │   │       ├── data_preview_tool.py        # 数据预览工具
 │   │       └── text_to_sql_service.py      # Text2SQL 服务
 │   ├── infra/
 │   │   ├── llm/
-│   │   │   └── chat_openai.py   # LLM 客户端封装
+│   │   │   └── chat_openai.py     # LLM 客户端封装
 │   │   ├── db/
-│   │   │   └── postgres_utils.py # PostgreSQL 工具
-│   │   ├── logger.py             # 日志工具
-│   │   └── Utils.py              # 通用工具
+│   │   │   └── postgres_utils.py  # PostgreSQL 工具
+│   │   ├── logger.py              # 日志工具
+│   │   └── Utils.py               # 通用工具
 │   └── prompts/
-│       └── system_prompt.md      # Agent 系统提示词
-├── bin/
-│   ├── deploy_mcp_server.sh      # 部署 MCP 服务脚本
-│   └── deploy_application.sh    # 部署应用脚本
-├── jupyters/                     # Jupyter notebooks
-├── logs/                         # 日志目录
-├── stats/                        # 会话状态存储
-└── env.template                  # 环境变量模板
+│       └── system_prompt.md       # Agent 系统提示词
+├── bin/                           # 脚本工具
+│   ├── deploy_mcp_server.sh       # 部署 MCP 服务脚本
+│   └── deploy_application.sh      # 部署应用脚本
+├── jupyters/                      # Jupyter notebooks
+├── logs/                          # 日志目录
+├── stats/                         # 会话状态存储
+└── env.template                   # 环境变量模板
 ```
 
 ## 环境要求

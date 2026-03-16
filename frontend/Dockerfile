@@ -1,0 +1,51 @@
+# Multi-stage Docker build for ChatBI Agent Frontend
+
+# Stage 1: Build
+FROM node:18-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+COPY mock-package.json ./mock-package.json
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build arguments
+ARG VITE_API_BASE_URL=/api
+ARG VITE_MCP_BASE_URL=/mcp
+ARG VITE_APP_TITLE=ChatBI Agent
+ARG VITE_APP_VERSION=0.1.0
+
+# Set environment variables for build
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_MCP_BASE_URL=${VITE_MCP_BASE_URL}
+ENV VITE_APP_TITLE=${VITE_APP_TITLE}
+ENV VITE_APP_VERSION=${VITE_APP_VERSION}
+
+# Build the application
+RUN npm run build
+
+# Stage 2: Production
+FROM nginx:alpine
+
+# Copy built assets from builder
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

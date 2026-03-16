@@ -14,3 +14,5 @@ logs
 */.chainlit
 stats
 **/chainlit.md
+node_modules
+**/node_modules
