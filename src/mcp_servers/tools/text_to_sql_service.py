@@ -1,13 +1,13 @@
 import os 
-from typing import Literal
 from dotenv import load_dotenv
+import asyncio
 
-from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
-from infra.postgres_utils import PostgresUtils
+from infra.db.async_postgres_utils import AsyncPostgresUtils
 from infra.llm.chat_openai import ChatOpenAI
 from infra.logger import Logger
+from infra.time_wrapper import timer_wrapper
 
 load_dotenv()
 
@@ -21,12 +21,13 @@ class TextToSqlService:
                  
                  base_url=os.environ['OPENAI_BASE_URL'],
                  api_key=os.environ['OPENAI_API_KEY']):
-        self.pg_util = PostgresUtils(host, port, db, user, password)
-        self.chat_open_ai = ChatOpenAI('Qwen/Qwen3-30B-A3B-Instruct-2507', base_url=base_url, api_key=api_key)
+        self.pg_util = AsyncPostgresUtils(host, port, db, user, password)
+        model = os.environ['MCP_MODEL']
+        self.chat_open_ai = ChatOpenAI(model, base_url=base_url, api_key=api_key)
         self.logger = Logger("generate_and_execute_sql_log.jsonl")
         
-    def _generate_hits(self, tbl_schema, tbl_name):
-        column_infos = self.pg_util.get_schema(tbl_schema, tbl_name)
+    async def _generate_hits(self, tbl_schema, tbl_name):
+        column_infos = await self.pg_util.get_schema(tbl_schema, tbl_name)
         columns_hits = [f"{column['column_name']}:{column['data_type']}" for column in column_infos]
         columns_hits_str = "\n".join(columns_hits)
 
@@ -37,7 +38,7 @@ class TextToSqlService:
             if data_type not in ("character varying", "varchar", "character", "char", "text"):
                 continue 
             else:
-                top_n = self.pg_util.get_top_n(tbl_schema, tbl_name, column_name, 5)
+                top_n = await self.pg_util.get_top_n(tbl_schema, tbl_name, column_name, 5)
                 values = ",".join(top_n.keys())
                 column_value_hits = f"{column_name}: {values}"
                 columns_value_hits.append(column_value_hits)
@@ -47,8 +48,9 @@ class TextToSqlService:
         return {'columns_hits_str': columns_hits_str, 'columns_value_hits_str': columns_value_hits_str}
 
 
-    def _generate_sys_prompt(self, tbl_schema, tbl_name):
-        hits = self._generate_hits(tbl_schema, tbl_name)
+    @timer_wrapper(enabled=bool(os.environ['TIME_WRAPPER_ENABLED']))
+    async def _generate_sys_prompt(self, tbl_schema, tbl_name):
+        hits = await self._generate_hits(tbl_schema, tbl_name)
         columns_hits_str = hits['columns_hits_str']
         columns_value_hits_str = hits['columns_value_hits_str'] 
 
@@ -75,11 +77,12 @@ class TextToSqlService:
                 参考值如下：\n {columns_value_hits_str}
         """
         return sys_prompt
-    
-    def generate_and_execute_sql_with_retry(self, tbl_schema, tbl_name, question, max_retry = -1):
+   
+    @timer_wrapper(enabled=bool(os.environ['TIME_WRAPPER_ENABLED']))
+    async def generate_and_execute_sql_with_retry(self, tbl_schema, tbl_name, question, max_retry = -1):
         success = False 
         retry_n = 0
-        sys_prompt = self._generate_sys_prompt(tbl_schema, tbl_name) 
+        sys_prompt = await self._generate_sys_prompt(tbl_schema, tbl_name) 
         user_prompt = f"""
             分析文本:{question}
             SQL代码:
@@ -88,17 +91,15 @@ class TextToSqlService:
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": user_prompt}
         ]
-        data_or_err = None
         while not success and (max_retry == -1 or retry_n < max_retry):
-            assistant_msg = self._text_to_sql(tbl_schema, tbl_name, question, messages)
+            assistant_msg = await self._text_to_sql(tbl_schema, tbl_name, question, messages)
             sql = assistant_msg.content
-            exec_success, data = self.execute_sql(sql)
+            exec_success, data = await self.execute_sql(sql)
             self.logger.save_jsonl({
                 "question": question,
                 "retry_n": retry_n,
                 "messages": messages,
                 "data": data
-                
             })
             if exec_success:
                 success = True
@@ -113,21 +114,27 @@ class TextToSqlService:
                 retry_n += 1            
     
     
-    
-    def _text_to_sql(self, tbl_schema, tbl_name, question, messages):
+    @timer_wrapper(enabled=bool(os.environ['TIME_WRAPPER_ENABLED']))
+    async def _text_to_sql(self, tbl_schema, tbl_name, question, messages):
         try:
-            message = self.chat_open_ai.chat(messages, temperature=0.3)
+            message = await self.chat_open_ai.async_chat(messages, temperature=0.3)
             return message
         except Exception as e: 
             err_msg = f"LLM execution failed[{messages}]: {e}."
             print(f"{err_msg}")
             raise Exception(err_msg)
 
-    def execute_sql(self, sql):
+    @timer_wrapper(enabled=bool(os.environ['TIME_WRAPPER_ENABLED']))
+    async def execute_sql(self, sql):
         try:
-            result = self.pg_util.execute_sql(sql)
+            result = await self.pg_util.execute_sql(sql)
             return True, result
         except Exception as e:
             err_msg = str(e)
             return False, err_msg
         
+
+
+if __name__ == "__main__":
+    service = TextToSqlService()
+    print(asyncio.run( service.generate_and_execute_sql_with_retry("llm", "tbl_super_store", "统计各产品类别的总销售额，按销售额降序排列")))
