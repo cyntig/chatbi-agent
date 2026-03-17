@@ -1,18 +1,23 @@
 import asyncio
 from datetime import datetime
 import json
-from typing import Literal
+import os
+import sys
+from typing import Literal, Optional
+
 from app.tool_register import ToolRegister
 from app.mcp_clients.chatbi_client import ChatBIClient
 from app.mcp_clients.chart_client import ChartClient
+from app.session_manager import SessionManager, DEFAULT_STATE_FILE
 from infra.llm.chat_openai import ChatOpenAI
 from infra.logger import Logger
 from infra.Utils import parser_to_json
-import jsonlines
-import sys
-import os
 from app.schema import Event, ToolCallEvent
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+# 项目根目录
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 class ChatBIAgent:
     def __init__(self,
@@ -20,10 +25,11 @@ class ChatBIAgent:
                  tool_register: ToolRegister,
                  session_id: str,
                  user_prompt: str,
-                 max_round: int = -1):
+                 max_round: int = -1,
+                 session_manager: Optional[SessionManager] = None):
         self._user_prompt = user_prompt
         self._sys_prompt = self._load_sys_prompt()
-        self._states = self._load_state()
+        self._session_manager = session_manager or SessionManager()
         self._tool_register = tool_register
         self._llmClient = llmClient
         self._session_id = session_id
@@ -32,28 +38,23 @@ class ChatBIAgent:
         self.log = Logger()
 
     def _load_sys_prompt(self):
-        with open("prompts/system_prompt.md", "r", encoding="utf-8") as f:
+        prompt_path = os.path.join(PROJECT_ROOT, "prompts", "system_prompt.md")
+        with open(prompt_path, "r", encoding="utf-8") as f:
             content = f.read()
         return content
 
     def _init_message(self):
-        if self._session_id in self._states:
-            session_states = self._states[self._session_id]
-            latest_state = session_states[-1]
-            self._messages = latest_state["messages"].copy()
+        existing_messages = self._session_manager.get_messages(self._session_id)
+        if existing_messages:
+            self._messages = existing_messages
         else:
             self._messages = [{'role': 'system', 'content': self._sys_prompt}]
 
         self._messages.append({'role': 'user', 'content': self._user_prompt})
 
-    def _update_state(self):
-        state = {
-            "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-            "messages": self._messages
-        }
-        if self._session_id not in self._states:
-            self._states[self._session_id] = []
-        self._states[self._session_id].append(state)
+    def _save_session(self):
+        """将当前会话状态委托给 SessionManager 保存"""
+        self._session_manager.save_state(self._session_id, self._messages)
 
     async def async_run(self):
         round = 0
@@ -96,8 +97,7 @@ class ChatBIAgent:
                 response_content = message.content
                 break
 
-        self._update_state()
-        self._save_state()
+        self._save_session()
 
         return response_content
 
@@ -107,7 +107,7 @@ class ChatBIAgent:
 
         while self._max_round == -1 or round < self._max_round:
             round += 1
-            deltas = self._llmClient.stream_chat(
+            deltas = self._llmClient.asyn_stream_chat(
                 self._messages,
                 temperature=0.3,
                 tools=tools,
@@ -118,7 +118,7 @@ class ChatBIAgent:
 
             content = ""
             idx_to_tool_call = {}
-            for delta in deltas:
+            async for delta in deltas:
                 if delta.tool_calls:  # tool_call
                     for delta_tool_call in delta.tool_calls:
                         index = delta_tool_call.index
@@ -169,33 +169,9 @@ class ChatBIAgent:
                 })
                 print(content)
                 break
-        self._update_state()
-        self._save_state()
+        self._save_session()
         print("end")
             
-    def _load_state(self):
-        states = {}
-        file_path = "../stats/session_stats.jsonl"
-        if os.path.exists(file_path):
-            with jsonlines.open(file_path) as reader:
-                for line in reader:
-                    if line['session_id'] not in states:
-                        states[line['session_id']] = []
-                    states[line['session_id']].append({
-                        "update_time": line['update_time'],
-                        "messages": line['messages']
-                    })
-        return states
-
-    def _save_state(self):
-        file_path = "../stats/session_stats.jsonl"
-
-        with jsonlines.open(file_path, mode='w') as writer:
-            for session_id, session_states in self._states.items():
-                for i, state in enumerate(session_states):
-                    session_states[i]["session_id"] = session_id
-                    writer.write(session_states[i])
-
 
 async def main(session_id: str, user_prompt: str):
     tool_register = ToolRegister(ChartClient(), ChatBIClient())

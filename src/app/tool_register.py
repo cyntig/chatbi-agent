@@ -13,8 +13,32 @@ class ToolRegister:
         self.clients = clients
         self._mcp_tools = []
         self._name_to_client = {}
-        self._load_tools()
-        
+        self._loaded = False
+
+    def _ensure_loaded(self):
+        """同步加载工具（用于非 async 场景，如命令行直接运行）"""
+        if not self._loaded:
+            self._load_tools_sync()
+
+    def _load_tools_sync(self):
+        for client in self.clients:
+            mcp_tools = asyncio.run(client.list_tools())
+            self._mcp_tools.extend(mcp_tools)
+            for mcp_tool in mcp_tools:
+                self._name_to_client[mcp_tool.name] = client
+        self._loaded = True
+        print(self._name_to_client)
+
+    async def async_load_tools(self):
+        """异步加载工具（用于 FastAPI 等 async 场景）"""
+        if self._loaded:
+            return
+        for client in self.clients:
+            mcp_tools = await client.list_tools()
+            self._mcp_tools.extend(mcp_tools)
+            for mcp_tool in mcp_tools:
+                self._name_to_client[mcp_tool.name] = client
+        self._loaded = True
         print(self._name_to_client)
 
     def _converter(self, mcp_tool):
@@ -43,11 +67,8 @@ class ToolRegister:
     
 
     def _load_tools(self):
-        for client in self.clients:
-            mcp_tools = asyncio.run(client.list_tools())
-            self._mcp_tools.extend(mcp_tools)
-            for mcp_tool in mcp_tools:
-                self._name_to_client[mcp_tool.name] = client
+        """兼容旧调用"""
+        self._load_tools_sync()
     
     def get_client(self, tool_name) -> BasicClient:
         return self._name_to_client[tool_name]

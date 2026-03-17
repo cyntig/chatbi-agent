@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
-from infra.postgres_utils import PostgresUtils
+from infra.db.postgres_utils import PostgresUtils
 from infra.llm.chat_openai import ChatOpenAI
 from infra.logger import Logger
 

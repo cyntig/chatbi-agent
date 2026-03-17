@@ -57,7 +57,7 @@ def data_preview(tbl_schema: Annotated[str, "postgres表schema"],
     min_value: 数值型、datatime类型最小值
     """
     
-    print(f"run data_preview: tbl_schema={tbl_schema}, tbl_name={tbl_name}" )
+    logger.normal_log.info(f" start calling tool data_preview: tbl_schema={tbl_schema}, tbl_name={tbl_name}." )
 
     host = os.environ['POSTGRES_HOST']
     port = os.environ['POSTGRES_PORT']
@@ -75,7 +75,7 @@ def generate_and_execute_sql(tbl_schema: Annotated[str, "postgres表schema"],
     将用户的自然语言问题进行分析，返回结构化结果。
     """
     
-    logger.log.info(f"calling tool generate_and_execute_sql: question={question}." )
+    logger.normal_log.info(f"calling tool generate_and_execute_sql: question={question}." )
 
     text_to_sql_service = TextToSqlService()
     data = text_to_sql_service.generate_and_execute_sql_with_retry(tbl_schema, tbl_name, question, 3)
