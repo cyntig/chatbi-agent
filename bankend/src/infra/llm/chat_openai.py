@@ -1,5 +1,8 @@
 # -*- coding: UTF-8 -*-
+from sympy.physics.units import L
 
+from infra.logger import logger
+from logging import Logger
 import os 
 from openai import OpenAI
 from openai import AsyncOpenAI
@@ -16,6 +19,7 @@ class ChatOpenAI:
         self._model = model
         self.client = OpenAI(base_url=base_url, api_key=api_key)
         self.async_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+        self.logger: Logger = logger("standard")
 
     
     def chat(self, 
@@ -63,7 +67,7 @@ class ChatOpenAI:
                 **kwargs
             )
             for chunk in stream:
-                print(chunk)
+                # print(chunk)
                 if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
                     continue
                 yield chunk.choices[0].delta

@@ -19,6 +19,9 @@ class ToolCallEvent:
         self.arguments = arguments
         self.output = output
         self.content = content
+    
+    def __str__(self) -> str:
+        return f"ToolCallEvent(name={self.name}, arguments={self.arguments}, output={self.output}, content={self.content})"
 
 
 class Event:
@@ -32,3 +35,7 @@ class Event:
         self.type = type
         self.tool_call = tool_call
         self.content = content
+    
+
+    def __str__(self) -> str:
+        return f"Event(type={self.type}, content={self.content}, tool_call={self.tool_call})"

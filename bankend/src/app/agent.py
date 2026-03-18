@@ -6,13 +6,16 @@ from app.tool_register import ToolRegister
 from app.mcp_clients.chatbi_client import ChatBIClient
 from app.mcp_clients.chart_client import ChartClient
 from infra.llm.chat_openai import ChatOpenAI
-from infra.logger import Logger
+from infra.logger import logger
+from logging import Logger
 from infra.Utils import parser_to_json
 import jsonlines
 import sys
 import os
 from app.schema import Event, ToolCallEvent
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+log: Logger = logger("standard")
 
 class ChatBIAgent:
     def __init__(self,
@@ -29,7 +32,6 @@ class ChatBIAgent:
         self._session_id = session_id
         self._max_round = max_round
         self._init_message()
-        self.log = Logger()
 
     def _load_sys_prompt(self):
         with open("prompts/system_prompt.md", "r", encoding="utf-8") as f:
@@ -55,70 +57,23 @@ class ChatBIAgent:
             self._states[self._session_id] = []
         self._states[self._session_id].append(state)
 
-    async def async_run(self):
-        round = 0
-        tools = self._tool_register.list_tools()
-
-        response_content = ""
-
-        while self._max_round == -1 or round < self._max_round:
-            round += 1
-            message = await self._llmClient.async_chat(
-                self._messages,
-                temperature=0.3,
-                tools=tools,
-                tool_choice='auto'
-            )
-            self.log.normal_log.info(f"Round {round}")
-            if message.tool_calls:
-                self._messages.append(message.model_dump())
-                for tool_call in message.tool_calls:
-                    print(f"call tool: {tool_call}")
-                    tool_call_name = tool_call.function.name
-                    tool_call_args_str = tool_call.function.arguments
-                    mcp_client = self._tool_register.get_client(tool_call_name)
-                    tool_call_result = await mcp_client.call_tool(
-                        tool_call_name, json.loads(tool_call_args_str))
-                    tool_call_result_context = "\n".join(
-                        [context.text for context in mcp_client.get_result_contents(tool_call_result)])
-
-                    self._messages.append({
-                        'role': 'tool',
-                        'tool_call_id': tool_call.id,
-                        "name": tool_call_name,
-                        'content': tool_call_result_context
-                    })
-            else:
-                self._messages.append({
-                    'role': 'assistant',
-                    'content': message.content
-                })
-                response_content = message.content
-                break
-
-        self._update_state()
-        self._save_state()
-
-        return response_content
-
     async def stream_run(self):
         round = 0
         tools = self._tool_register.list_tools()
 
         while self._max_round == -1 or round < self._max_round:
             round += 1
-            deltas = self._llmClient.stream_chat(
-                self._messages,
-                temperature=0.3,
-                tools=tools,
-                tool_choice='auto',
-                max_tokens=96000
-            )
-            self.log.normal_log.info(f"Round {round}")
+            log.info(f"Round {round}")
 
             content = ""
             idx_to_tool_call = {}
-            for delta in deltas:
+            # asyn_stream_chat 是异步生成器，直接用 async for 迭代
+            async for delta in self._llmClient.asyn_stream_chat(
+                self._messages,
+                temperature=0.3,
+                tools=tools,
+                tool_choice='auto'
+            ):
                 if delta.tool_calls:  # tool_call
                     for delta_tool_call in delta.tool_calls:
                         index = delta_tool_call.index
@@ -149,7 +104,7 @@ class ChatBIAgent:
                 })
                 
                 for idx in idx_to_tool_call:
-                    self.log.normal_log.info(f"tool call: {json.dumps(idx_to_tool_call[idx])}")
+                    log.info(f"tool call: {json.dumps(idx_to_tool_call[idx])}")
                     func_name = idx_to_tool_call[idx]['function']['name']
                     func_args = json.loads(idx_to_tool_call[idx]['function']['arguments'])
                     client = self._tool_register.get_client(func_name)
@@ -167,11 +122,11 @@ class ChatBIAgent:
                     "role": "assistant",
                     "content": content
                 })
-                print(content)
+                # print(content)
                 break
         self._update_state()
         self._save_state()
-        print("end")
+        log.info(f"Session {self._session_id} running completed.")
             
     def _load_state(self):
         states = {}
@@ -199,22 +154,28 @@ class ChatBIAgent:
 
 async def main(session_id: str, user_prompt: str):
     tool_register = ToolRegister(ChartClient(), ChatBIClient())
-    llm_client = ChatOpenAI('Qwen/Qwen3.5-397B-A17B')
-    # llm_client = ChatOpenAI('moonshotai/Kimi-K2-Instruct-0905')
+    await tool_register.initialize()  # 异步初始化工具注册器
+    llm_client = ChatOpenAI(os.environ[ "AGENT_MODEL"])
     async_agent = ChatBIAgent(llm_client, tool_register, session_id, user_prompt)
     async for msg in async_agent.stream_run():
-        print(msg, end='')
+        if (msg.type == 'tool'):
+            print(msg.tool_call)
+        else:
+            print(msg.content, end='')
 
 
 if __name__ == "__main__":
-    user_prompt = """
-请对下面数据库表的数据形成可视化报告
-table_schema：llm
-table_name: tbl_super_store
-        """.strip()
+#     user_prompt = """
+# 请对下面数据库表的数据形成可视化报告
+# table_schema：llm
+# table_name: tbl_super_store
+#         """.strip()
 
-    # user_prompt = "仅保留第一个主题的第一个问题"
+    user_prompt = "ok"
     # user_prompt = "你为什么没有使用相应的工具，而是直接生成了报告，先不要着急修正错误去直接使用工具，而是回答我，是哪部分信息让你直接生成报告而不是使用工具"
+
+    print(os.environ['AGENT_MODEL'])
+    print(os.environ['MCP_MODEL'])
 
     session_id = "1"
     asyncio.run(main(session_id, user_prompt))

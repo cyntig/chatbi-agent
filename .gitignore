@@ -9,8 +9,8 @@
 **/out
 **/.vscode
 anaconda_projects
-logs
+**/logs
 .chainlit
 */.chainlit
-stats
+**/stats
 **/chainlit.md

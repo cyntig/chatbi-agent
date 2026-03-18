@@ -13,9 +13,14 @@ class ToolRegister:
         self.clients = clients
         self._mcp_tools = []
         self._name_to_client = {}
-        self._load_tools()
-        
-        print(self._name_to_client)
+        self._initialized = False
+
+    async def initialize(self):
+        """异步初始化方法，加载工具列表"""
+        if self._initialized:
+            return
+        await self._load_tools()
+        self._initialized = True
 
     def _converter(self, mcp_tool):
         # schema = {
@@ -42,9 +47,9 @@ class ToolRegister:
 
     
 
-    def _load_tools(self):
+    async def _load_tools(self):
         for client in self.clients:
-            mcp_tools = asyncio.run(client.list_tools())
+            mcp_tools = await client.list_tools()
             self._mcp_tools.extend(mcp_tools)
             for mcp_tool in mcp_tools:
                 self._name_to_client[mcp_tool.name] = client
@@ -57,10 +62,14 @@ class ToolRegister:
     
 
 if __name__ == "__main__":
-    tool_register = ToolRegister(ChartClient())
-    # print(*tool_register._mcp_tools, sep='\n')
-    # print(tool_register._name_to_client)
-    tools = tool_register.list_tools()
-    print(len(tools))
-    print(*tool_register.list_tools(), sep='\n')
-    # print(tool_register.call_tool("data_preview", {'tbl_schema':'llm', 'tbl_name':'tbl_super_store'}))
+    async def main():
+        tool_register = ToolRegister(ChartClient())
+        await tool_register.initialize()
+        # print(*tool_register._mcp_tools, sep='\n')
+        # print(tool_register._name_to_client)
+        tools = tool_register.list_tools()
+        print(len(tools))
+        print(*tool_register.list_tools(), sep='\n')
+        # print(tool_register.call_tool("data_preview", {'tbl_schema':'llm', 'tbl_name':'tbl_super_store'}))
+    
+    asyncio.run(main())

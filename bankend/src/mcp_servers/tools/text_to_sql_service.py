@@ -4,30 +4,24 @@ import asyncio
 
 from openai.types.chat import ChatCompletionMessageParam
 
-from infra.db.async_postgres_utils import AsyncPostgresUtils
+from infra.db.async_postgres_utils import async_postgres_utils
 from infra.llm.chat_openai import ChatOpenAI
-from infra.logger import Logger
+from infra.logger import logger
 from infra.time_wrapper import timer_wrapper
+import json
 
 load_dotenv()
 
 class TextToSqlService:
-    def __init__(self, 
-                 host=os.environ['POSTGRES_HOST'], 
-                 port=os.environ['POSTGRES_PORT'], 
-                 db=os.environ['POSTGRES_DATABASE'],
-                 user=os.environ['POSTGRES_USER'], 
-                 password=os.environ['POSTGRES_PWD'], 
-                 
+    def __init__(self,
                  base_url=os.environ['OPENAI_BASE_URL'],
                  api_key=os.environ['OPENAI_API_KEY']):
-        self.pg_util = AsyncPostgresUtils(host, port, db, user, password)
         model = os.environ['MCP_MODEL']
         self.chat_open_ai = ChatOpenAI(model, base_url=base_url, api_key=api_key)
-        self.logger = Logger("generate_and_execute_sql_log.jsonl")
+        self.postgres_logger = logger("postgres")
         
     async def _generate_hits(self, tbl_schema, tbl_name):
-        column_infos = await self.pg_util.get_schema(tbl_schema, tbl_name)
+        column_infos = await async_postgres_utils.get_schema(tbl_schema, tbl_name)
         columns_hits = [f"{column['column_name']}:{column['data_type']}" for column in column_infos]
         columns_hits_str = "\n".join(columns_hits)
 
@@ -38,7 +32,7 @@ class TextToSqlService:
             if data_type not in ("character varying", "varchar", "character", "char", "text"):
                 continue 
             else:
-                top_n = await self.pg_util.get_top_n(tbl_schema, tbl_name, column_name, 5)
+                top_n = await async_postgres_utils.get_top_n(tbl_schema, tbl_name, column_name, 5)
                 values = ",".join(top_n.keys())
                 column_value_hits = f"{column_name}: {values}"
                 columns_value_hits.append(column_value_hits)
@@ -95,12 +89,12 @@ class TextToSqlService:
             assistant_msg = await self._text_to_sql(tbl_schema, tbl_name, question, messages)
             sql = assistant_msg.content
             exec_success, data = await self.execute_sql(sql)
-            self.logger.save_jsonl({
+            self.postgres_logger.info(json.dumps({
                 "question": question,
                 "retry_n": retry_n,
                 "messages": messages,
                 "data": data
-            })
+            }, ensure_ascii=False))
             if exec_success:
                 success = True
                 return data
@@ -127,7 +121,7 @@ class TextToSqlService:
     @timer_wrapper(enabled=bool(os.environ['TIME_WRAPPER_ENABLED']))
     async def execute_sql(self, sql):
         try:
-            result = await self.pg_util.execute_sql(sql)
+            result = await async_postgres_utils.execute_sql(sql)
             return True, result
         except Exception as e:
             err_msg = str(e)

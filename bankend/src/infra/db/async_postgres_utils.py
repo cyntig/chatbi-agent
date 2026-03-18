@@ -7,7 +7,7 @@ Created by cyntig on 2026/03/17.
 import asyncio
 import re
 from typing import Optional
-from infra.logger import Logger
+from infra.logger import logger
 import os
 from dotenv import load_dotenv
 import asyncpg
@@ -18,6 +18,8 @@ load_dotenv()
 
 class AsyncPostgresUtils:
     """Async PostgreSQL utilities."""
+    
+    _lock = asyncio.Lock()  # 类级别的锁，确保连接池创建的线程安全
 
     def __init__(self,
                  host=os.environ['POSTGRES_HOST'],
@@ -25,7 +27,7 @@ class AsyncPostgresUtils:
                  db=os.environ['POSTGRES_DATABASE'],
                  user=os.environ['POSTGRES_USER'],
                  password=os.environ['POSTGRES_PWD']) -> None:
-        self.logger = Logger()
+        self.logger = logger("standard")
         self._host = host
         self._port = port
         self._db = db
@@ -34,12 +36,21 @@ class AsyncPostgresUtils:
         self._pool: Optional[asyncpg.Pool] = None
 
     async def _connect(self) -> None:
-        """Create a connection to the database."""
-        self._pool = await asyncpg.create_pool(user=self._user, 
-                                        password=self._password, 
-                                        database=self._db, 
-                                        host=self._host,
-                                        port=self._port)
+        """Create a connection pool to the database with proper limits."""
+        async with self._lock:
+            # Double-check pattern：再次检查避免重复创建
+            if self._pool is not None:
+                return
+            self._pool = await asyncpg.create_pool(
+                user=self._user, 
+                password=self._password, 
+                database=self._db, 
+                host=self._host,
+                port=self._port,
+                min_size=2,      # 最小连接数
+                max_size=10,     # 最大连接数
+                max_inactive_connection_lifetime=300  # 空闲连接 5 分钟后释放
+            )
 
     async def _close(self) -> None:
         """Close the database connection."""
@@ -53,6 +64,7 @@ class AsyncPostgresUtils:
         try:
             if self._pool is None:
                 await self._connect()
+            assert self._pool is not None  # 类型检查断言
             async with self._pool.acquire() as conn:
                 rows = await conn.fetch(query)
                 result = []
@@ -71,14 +83,12 @@ class AsyncPostgresUtils:
             return result
         except Exception as e:
             err_msg = f"Query execution error: {e}."
-            self.logger.normal_log.error(err_msg)
+            self.logger.error(err_msg)
             raise e
         
         
     async def get_schema(self, tbl_schema, tbl_name):
         """Get the schema of a table."""
-        if not self._pool:
-            await self._connect()
         sql = f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{tbl_name}' AND table_schema = '{tbl_schema}';"
         return await self.execute_sql(sql)
     
@@ -104,9 +114,8 @@ class AsyncPostgresUtils:
         return (await self.execute_sql(sql))[0]
 
 
+# 模块单例
+async_postgres_utils = AsyncPostgresUtils()
+
 if __name__ == "__main__":
-    util = AsyncPostgresUtils()
-    # result = asyncio.run(util.execute_sql('SELECT "产品类别", SUM("总售价") AS 总销售额 FROM llm.tbl_super_store GROUP BY "产品类别" ORDER BY 总销售额 DESC'))
-    # print(asyncio.run(util.get_schema('llm', 'tbl_super_store')))
-    # print(result)
-    print(asyncio.run(util.get_top_n('llm', 'tbl_super_store', '产品类别', 10)))
+    print(asyncio.run(async_postgres_utils.get_top_n('llm', 'tbl_super_store', '产品类别', 10)))
