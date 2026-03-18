@@ -9,16 +9,20 @@ from infra.llm.chat_openai import ChatOpenAI
 from infra.logger import logger
 from infra.time_wrapper import timer_wrapper
 import json
+from config import cfg
 
 load_dotenv()
+
 
 class TextToSqlService:
     def __init__(self,
                  base_url=os.environ['OPENAI_BASE_URL'],
                  api_key=os.environ['OPENAI_API_KEY']):
-        model = os.environ['MCP_MODEL']
+        model: str = cfg.llm_model['mcp_model']
         self.chat_open_ai = ChatOpenAI(model, base_url=base_url, api_key=api_key)
         self.postgres_logger = logger("postgres")
+        self.log = logger("standard")
+        self.log.info(f"TextToSqlService initialized, use model={model}.")
         
     async def _generate_hits(self, tbl_schema, tbl_name):
         column_infos = await async_postgres_utils.get_schema(tbl_schema, tbl_name)

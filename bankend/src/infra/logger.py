@@ -8,8 +8,14 @@ from typing import Literal
 import logging
 import logging.config
 from logging import Logger
+from config import cfg
 import sys
 import os 
+
+_LOG_LEVEL = cfg.logging['level']
+_LOG_DIR = cfg.logging['dir']
+_LOG_FILE = cfg.logging['common_file']
+_LOG_POSTGRES_FILE = cfg.logging['postgres_file']
 
 _LOGGING_CONFIG = {
     "version": 1,
@@ -18,7 +24,7 @@ _LOGGING_CONFIG = {
 
     "formatters": {
         "standard": {
-            "format": "[%(asctime)s][%(levelname)s][%(funcName)s] %(message)s"
+            "format": "[%(asctime)s][%(levelname)s][%(module)s|%(funcName)s][%(lineno)d] %(message)s"
         },
         "stream": {
             "format":  "%(message)s"
@@ -28,30 +34,30 @@ _LOGGING_CONFIG = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "level": "INFO",
+            "level": _LOG_LEVEL,
             "formatter": "standard",
             "stream": "ext://sys.stdout"
         },
         "console_stream": {
             "class": "logging.StreamHandler",
-            "level": "DEBUG",
+            "level": _LOG_LEVEL,
             "formatter": "stream",
             "stream": "ext://sys.stdout"
         },
         "file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": "INFO",
+            "level": _LOG_LEVEL,
             "formatter": "standard",
-            "filename": "../logs/app.log",
+            "filename": os.path.join(_LOG_DIR, _LOG_FILE),
             "maxBytes": 10485760,
             "backupCount": 5,
             "encoding": "utf-8"
         },
         "postgres_file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "level": "INFO",
+            "level": _LOG_LEVEL,
             "formatter": "standard",
-            "filename": "../logs/postgres.log",
+            "filename": os.path.join(_LOG_DIR, _LOG_POSTGRES_FILE),
             "maxBytes": 10485760,
             "backupCount": 5,
             "encoding": "utf-8"

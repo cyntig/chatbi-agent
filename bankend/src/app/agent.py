@@ -13,6 +13,7 @@ import jsonlines
 import sys
 import os
 from app.schema import Event, ToolCallEvent
+from config import cfg
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 log: Logger = logger("standard")
@@ -155,11 +156,15 @@ class ChatBIAgent:
 async def main(session_id: str, user_prompt: str):
     tool_register = ToolRegister(ChartClient(), ChatBIClient())
     await tool_register.initialize()  # 异步初始化工具注册器
-    llm_client = ChatOpenAI(os.environ[ "AGENT_MODEL"])
+    agent_model = cfg.llm_model['agent_model']
+    print("agent model: " + agent_model)
+    llm_client = ChatOpenAI(agent_model)
     async_agent = ChatBIAgent(llm_client, tool_register, session_id, user_prompt)
     async for msg in async_agent.stream_run():
         if (msg.type == 'tool'):
+            print("start tool call")
             print(msg.tool_call)
+            print("end tool call")
         else:
             print(msg.content, end='')
 
@@ -174,8 +179,6 @@ if __name__ == "__main__":
     user_prompt = "ok"
     # user_prompt = "你为什么没有使用相应的工具，而是直接生成了报告，先不要着急修正错误去直接使用工具，而是回答我，是哪部分信息让你直接生成报告而不是使用工具"
 
-    print(os.environ['AGENT_MODEL'])
-    print(os.environ['MCP_MODEL'])
 
     session_id = "1"
     asyncio.run(main(session_id, user_prompt))

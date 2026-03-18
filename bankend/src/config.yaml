@@ -1,0 +1,12 @@
+# config.yaml
+
+logging:
+  level: INFO
+  dir: ../logs
+  common_file: app.log
+  postgres_file: postgres.log
+
+llm_model:
+  mcp_model: qwen3-30b-a3b-instruct-2507
+  agent_model: kimi-k2.5
+

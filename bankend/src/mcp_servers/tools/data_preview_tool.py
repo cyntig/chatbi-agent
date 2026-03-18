@@ -1,6 +1,7 @@
 # -*- coding: UTF-8 -*-
 from infra.time_wrapper import timer_wrapper
 from infra.db.async_postgres_utils import async_postgres_utils
+from infra.logger import logger
 
 from dotenv import load_dotenv
 import os
@@ -11,6 +12,10 @@ load_dotenv()
 
 
 class DataPreviewTool: 
+    def __init__(self):
+        self.log = logger("standard")   
+        self.log.info(f"DataPreviewTool initialized.")
+
     @timer_wrapper(enabled=bool(os.environ['TIME_WRAPPER_ENABLED']))
     async def data_preview(self, tbl_schema, tbl_name) -> list:
         schemas = await async_postgres_utils.get_schema(tbl_schema, tbl_name)
