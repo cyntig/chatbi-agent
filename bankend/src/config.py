@@ -16,6 +16,7 @@ class Config:
 
 
 cfg = Config("config.yaml")
+AGENT_MODEL = cfg.llm_model['agent_model']
 
 if __name__ == "__main__":
     print(cfg.logging)

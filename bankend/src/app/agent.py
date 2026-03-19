@@ -5,6 +5,7 @@ from typing import Literal
 from app.tool_register import ToolRegister
 from app.mcp_clients.chatbi_client import ChatBIClient
 from app.mcp_clients.chart_client import ChartClient
+from app.session_manager import SessionManager
 from infra.llm.chat_openai import ChatOpenAI
 from infra.logger import logger
 from logging import Logger
@@ -17,19 +18,21 @@ from config import cfg
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 log: Logger = logger("standard")
+stream_log: Logger = logger("stream")
 
 class ChatBIAgent:
     def __init__(self,
-                 llmClient: ChatOpenAI,
+                 llm_client: ChatOpenAI,
                  tool_register: ToolRegister,
+                 session_manager: SessionManager,
                  session_id: str,
                  user_prompt: str,
                  max_round: int = -1):
         self._user_prompt = user_prompt
         self._sys_prompt = self._load_sys_prompt()
-        self._states = self._load_state()
+        self._session_manager = session_manager
         self._tool_register = tool_register
-        self._llmClient = llmClient
+        self._llmClient = llm_client
         self._session_id = session_id
         self._max_round = max_round
         self._init_message()
@@ -40,23 +43,13 @@ class ChatBIAgent:
         return content
 
     def _init_message(self):
-        if self._session_id in self._states:
-            session_states = self._states[self._session_id]
-            latest_state = session_states[-1]
-            self._messages = latest_state["messages"].copy()
+        existing_messages = self._session_manager.get_messages(self._session_id)
+        if existing_messages:
+            self._messages = existing_messages
         else:
             self._messages = [{'role': 'system', 'content': self._sys_prompt}]
 
         self._messages.append({'role': 'user', 'content': self._user_prompt})
-
-    def _update_state(self):
-        state = {
-            "update_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),
-            "messages": self._messages
-        }
-        if self._session_id not in self._states:
-            self._states[self._session_id] = []
-        self._states[self._session_id].append(state)
 
     async def stream_run(self):
         round = 0
@@ -93,10 +86,10 @@ class ChatBIAgent:
                         idx_to_tool_call[index]['function']['arguments'] += delta_tool_call.function.arguments
 
                 if delta.content is not None:  # content
-                    yield Event('content', delta.content)
+                    yield Event(type='text', content=delta.content)
                     content += delta.content
                 
-            yield Event("content", "\n")
+            yield Event(type='text', content="\n")
             if len(idx_to_tool_call) > 0:
                 self._messages.append({
                     "role": "assistant",
@@ -110,9 +103,15 @@ class ChatBIAgent:
                     func_args = json.loads(idx_to_tool_call[idx]['function']['arguments'])
                     client = self._tool_register.get_client(func_name)
                     func_result = await client.call_tool(func_name, func_args)
+                    result_contents = client.get_result_contents(func_result)
                     func_result_content = "".join(
-                        [content.text for content in client.get_result_contents(func_result)])
-                    yield Event("tool", tool_call=ToolCallEvent(func_name, func_args, parser_to_json(func_result_content), content))
+                        [item.text if hasattr(item, 'text') else str(item) for item in result_contents])  # type: ignore[no-matching-overload]
+                    yield Event(type="tool", tool_call=ToolCallEvent(
+                        name=func_name, 
+                        arguments=str(func_args), 
+                        output=func_result_content, 
+                        content=content
+                    ))
                     self._messages.append({
                         "role": "tool",
                         "tool_call_id": idx_to_tool_call[idx]['id'],
@@ -123,9 +122,7 @@ class ChatBIAgent:
                     "role": "assistant",
                     "content": content
                 })
-                # print(content)
                 break
-        self._update_state()
         self._save_state()
         log.info(f"Session {self._session_id} running completed.")
             
@@ -144,13 +141,7 @@ class ChatBIAgent:
         return states
 
     def _save_state(self):
-        file_path = "../stats/session_stats.jsonl"
-
-        with jsonlines.open(file_path, mode='w') as writer:
-            for session_id, session_states in self._states.items():
-                for i, state in enumerate(session_states):
-                    session_states[i]["session_id"] = session_id
-                    writer.write(session_states[i])
+        self._session_manager.save_state(self._session_id, self._messages)
 
 
 async def main(session_id: str, user_prompt: str):
@@ -159,25 +150,27 @@ async def main(session_id: str, user_prompt: str):
     agent_model = cfg.llm_model['agent_model']
     print("agent model: " + agent_model)
     llm_client = ChatOpenAI(agent_model)
-    async_agent = ChatBIAgent(llm_client, tool_register, session_id, user_prompt)
+    session_manager = SessionManager()
+    async_agent = ChatBIAgent(llm_client, tool_register, session_manager, session_id, user_prompt)
     async for msg in async_agent.stream_run():
-        if (msg.type == 'tool'):
-            print("start tool call")
-            print(msg.tool_call)
-            print("end tool call")
+        # print(msg.model_dump())
+        if msg.type == "text":
+            print(msg.content, end="", flush=True)
         else:
-            print(msg.content, end='')
+            print(type(msg.tool_call.output))
+            print(msg.tool_call.output)
+        
 
 
 if __name__ == "__main__":
-#     user_prompt = """
-# 请对下面数据库表的数据形成可视化报告
-# table_schema：llm
-# table_name: tbl_super_store
-#         """.strip()
+    user_prompt = """
+请对下面数据库表的数据形成可视化报告
+table_schema：llm
+table_name: tbl_super_store
+        """.strip()
 
-    user_prompt = "ok"
-    # user_prompt = "你为什么没有使用相应的工具，而是直接生成了报告，先不要着急修正错误去直接使用工具，而是回答我，是哪部分信息让你直接生成报告而不是使用工具"
+    # user_prompt = "保留第一个主题的第一个问题"
+    # user_prompt= "ok"
 
 
     session_id = "1"

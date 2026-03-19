@@ -60,7 +60,7 @@ class ChatOpenAI:
             messages = [{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts
             print(f"messages: {messages}")
             
-            stream = self.client.chat.completions.create(
+            stream = self.client.chat.completions.create(  # type: ignore[no-matching-overload]
                 model=self._model,
                 messages=messages,
                 stream=True,
@@ -80,13 +80,16 @@ class ChatOpenAI:
                          prompts: list | str, 
                          **kwargs):
         try: 
-            stream = await self.async_client.chat.completions.create(
+            messages = [{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts
+            stream = await self.async_client.chat.completions.create(  # type: ignore[no-matching-overload]
                 model=self._model,
-                messages=[{"role": "user", "content": prompts}] if isinstance(prompts, str) else prompts,
+                messages=messages,
                 stream=True,
                 **kwargs
             )
+            self.logger.debug(f"messages: {messages}")
             async for chunk in stream: 
+                self.logger.debug(f"chunk: {chunk}")
                 if (len(chunk.choices) == 0 or chunk.choices[0].delta is None):
                     continue
                 yield chunk.choices[0].delta
