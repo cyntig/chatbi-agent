@@ -14,3 +14,4 @@ anaconda_projects
 */.chainlit
 **/stats
 **/chainlit.md
+.claude
