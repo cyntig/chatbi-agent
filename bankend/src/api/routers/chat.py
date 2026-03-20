@@ -24,21 +24,25 @@ async def chat_stream(session_id: str, message: str):
     """
 
     async def event_generator(sid: str, message: str):
-        try: 
+        try:
             tool_register = await get_tool_register()
             sm = get_session_manager()
             llm_client = ChatOpenAI(model=AGENT_MODEL)
             agent = ChatBIAgent(
-                llm_client=llm_client, 
+                llm_client=llm_client,
                 session_manager=sm,
                 tool_register=tool_register,
                 session_id=sid,
                 user_prompt=message
             )
             async for event in agent.stream_run():
-                yield event.model_dump()
+                # 将字典转换为JSON字符串，并按SSE格式包装
+                event_json = json.dumps(event.model_dump(), ensure_ascii=False)
+                yield f"data: {event_json}\n\n"
         except Exception as e:
-            yield Event(type="error", content=str(e)).model_dump()
+            error_event = Event(type="error", content=str(e)).model_dump()
+            error_json = json.dumps(error_event, ensure_ascii=False)
+            yield f"data: {error_json}\n\n"
 
     return StreamingResponse(
         content=event_generator(session_id, message),

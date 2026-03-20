@@ -37,7 +37,7 @@ class ToolRegister:
             # 如果只使用转换后的工具列表的话，server可以留空
             server=MCPServerStreamableHttp(
                 params=MCPServerStreamableHttpParams(
-                    url='http://localhost:8000/mcp'
+                    url='http://localhost:8001/mcp'
                 ),
             ),
             convert_schemas_to_strict=True,

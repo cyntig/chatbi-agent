@@ -106,11 +106,18 @@ class ChatBIAgent:
                     result_contents = client.get_result_contents(func_result)
                     func_result_content = "".join(
                         [item.text if hasattr(item, 'text') else str(item) for item in result_contents])  # type: ignore[no-matching-overload]
+
+                    # 尝试将输出解析为JSON，如果失败则保持原样
+                    try:
+                        output_json = json.loads(func_result_content)
+                        output_formatted = json.dumps(output_json, ensure_ascii=False, indent=2)
+                    except (json.JSONDecodeError, TypeError):
+                        output_formatted = func_result_content
+
                     yield Event(type="tool", tool_call=ToolCallEvent(
-                        name=func_name, 
-                        arguments=str(func_args), 
-                        output=func_result_content, 
-                        content=content
+                        name=func_name,
+                        arguments=json.dumps(func_args, ensure_ascii=False, indent=2),
+                        output=output_formatted,
                     ))
                     self._messages.append({
                         "role": "tool",

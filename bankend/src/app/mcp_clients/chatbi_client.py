@@ -6,7 +6,7 @@ from fastmcp.client.transports import StreamableHttpTransport
 class ChatBIClient(BasicClient):
     def _create_client(self) -> Client:
         transport = StreamableHttpTransport(
-            url="http://127.0.0.1:8000/mcp",
+            url="http://127.0.0.1:8001/mcp",
         )
         return Client(transport)
     

@@ -1,0 +1,22 @@
+# FastAPI 服务器
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+
+# 数据库
+sqlalchemy==2.0.25
+alembic==1.13.1
+
+# 工具库
+pyyaml==6.0.1
+python-dotenv==1.0.0
+
+# Chainlit (如果需要保留原有界面)
+chainlit==1.0.500
+
+# HTTP 客户端
+httpx==0.26.0
+requests==2.31.0
+
+# 其他依赖
+openai>=1.0.0

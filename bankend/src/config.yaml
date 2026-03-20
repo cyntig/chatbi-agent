@@ -1,7 +1,7 @@
 # config.yaml
 
 logging:
-  level: INFO
+  level: DEBUG
   dir: ../logs
   common_file: app.log
   postgres_file: postgres.log

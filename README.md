@@ -178,7 +178,7 @@ llm_client = ChatOpenAI('Qwen/Qwen3.5-397B-A17B')
 
 ### MCP 服务地址
 
-- ChatBI 服务：`http://127.0.0.1:8000/mcp`
+- ChatBI 服务：`http://127.0.0.1:8001/mcp`
 - Chart 服务：使用 `@antv/mcp-server-chart` (通过 npx 运行)
 
 ## 开发说明

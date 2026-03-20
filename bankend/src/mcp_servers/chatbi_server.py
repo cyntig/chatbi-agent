@@ -75,7 +75,7 @@ async def generate_and_execute_sql(tbl_schema: Annotated[str, "postgres表schema
         
 
 if __name__ == "__main__":
-    server.run(transport="http",  host="0.0.0.0", port=8000)
+    server.run(transport="http",  host="0.0.0.0", port=8001)
 
      
 

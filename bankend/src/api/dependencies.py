@@ -20,8 +20,8 @@ def get_session_manager() -> SessionManager:
 
 
 async def get_tool_register() -> ToolRegister:
-    global _tool_register 
+    global _tool_register
     if _tool_register is None:
-        _tool_register = ToolRegister()
+        _tool_register = ToolRegister(ChatBIClient(), ChartClient())
         await _tool_register.initialize()
     return _tool_register
