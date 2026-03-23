@@ -7,32 +7,35 @@
       :aria-label="`工具调用: ${toolCall.name}`"
     >
       <div class="tool-icon-wrapper">
-        <ToolIcon />
+        <Wrench :size="14" :stroke-width="1.5" />
       </div>
       <span class="tool-name">{{ toolCall.name }}</span>
       <span class="tool-chevron" :class="{ expanded }">
-        <ChevronIcon />
+        <ChevronDown :size="14" :stroke-width="1.5" />
       </span>
     </button>
-    <div v-if="expanded" class="tool-body">
-      <div class="tool-section">
-        <div class="section-label">参数</div>
-        <pre class="tool-code">{{ formattedArguments }}</pre>
+    <Transition name="expand">
+      <div v-if="expanded" class="tool-body">
+        <div class="tool-section">
+          <div class="section-label">参数</div>
+          <pre class="tool-code">{{ formattedArguments }}</pre>
+        </div>
+        <div v-if="toolCall.output" class="tool-section">
+          <div class="section-label">结果</div>
+          <pre class="tool-code tool-code--output">{{ formattedOutput }}</pre>
+        </div>
+        <div v-if="toolCall.content" class="tool-section">
+          <div class="section-label">内容</div>
+          <div class="tool-content-text">{{ toolCall.content }}</div>
+        </div>
       </div>
-      <div v-if="toolCall.output" class="tool-section">
-        <div class="section-label">结果</div>
-        <pre class="tool-code tool-code--output">{{ formattedOutput }}</pre>
-      </div>
-      <div v-if="toolCall.content" class="tool-section">
-        <div class="section-label">内容</div>
-        <div class="tool-content-text">{{ toolCall.content }}</div>
-      </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { Wrench, ChevronDown } from 'lucide-vue-next'
 import type { ToolCall } from '@/types/api'
 
 const props = defineProps<{
@@ -69,23 +72,6 @@ const formattedOutput = computed(() => {
     return props.toolCall.output
   }
 })
-
-// Icon components
-const ToolIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-    </svg>
-  `,
-}
-
-const ChevronIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="6 9 12 15 18 9"></polyline>
-    </svg>
-  `,
-}
 </script>
 
 <style scoped>
@@ -115,6 +101,10 @@ const ChevronIcon = {
   background-color: var(--hover-bg);
 }
 
+.tool-header:active {
+  transform: scale(0.99);
+}
+
 .tool-icon-wrapper {
   display: flex;
   align-items: center;
@@ -127,13 +117,14 @@ const ChevronIcon = {
   font-size: 0.8125rem;
   color: var(--text-primary);
   font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+  text-align: left;
 }
 
 .tool-chevron {
   display: flex;
   align-items: center;
   color: var(--text-tertiary);
-  transition: transform 0.2s;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tool-chevron.expanded {
@@ -146,6 +137,39 @@ const ChevronIcon = {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+/* Expand transition */
+.expand-enter-active {
+  transition: max-height 250ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.expand-leave-active {
+  transition: max-height 180ms ease-out,
+              opacity 180ms ease-out;
+  overflow: hidden;
+}
+
+.expand-enter-from {
+  max-height: 0;
+  opacity: 0;
+}
+
+.expand-enter-to {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.expand-leave-from {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
 }
 
 .section-label {

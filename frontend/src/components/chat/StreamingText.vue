@@ -12,9 +12,10 @@ import hljs from 'highlight.js'
 
 const props = defineProps<{
   content: string
+  showCursor?: boolean
 }>()
 
-const isStreaming = computed(() => props.content && props.content.length > 0)
+const isStreaming = computed(() => props.showCursor !== false)
 
 const md = new MarkdownIt({
   html: true,

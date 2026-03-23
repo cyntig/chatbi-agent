@@ -146,6 +146,7 @@ export const useChatStore = defineStore('chat', () => {
           markMessageComplete(assistantMessageId)
         },
         onComplete: () => {
+          markMessageComplete(assistantMessageId)
           isStreaming.value = false
           abortFn = null
         },

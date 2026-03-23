@@ -2,19 +2,19 @@
   <div
     class="session-item"
     :class="{ active }"
-    role="button"
+    role="option"
     :tabindex="0"
     :aria-current="active ? 'page' : undefined"
+    :aria-selected="active"
     :aria-label="session.title"
     @click="handleClick"
     @keydown.enter="handleClick"
   >
     <div class="session-content">
-      <ChatIcon />
-      <div v-if="!isEditing" class="session-title">{{ session.title }}</div>
+      <div v-if="!isEditing" class="session-title" :title="session.title">{{ session.title }}</div>
       <div v-else class="session-edit" @click.stop>
         <input
-          ref="editInput"
+          ref="editInputRef"
           v-model="editTitle"
           class="session-edit-input"
           aria-label="编辑会话标题"
@@ -23,28 +23,45 @@
         />
       </div>
     </div>
+
+    <!-- Fade mask for long text (only when not editing and not hovered) -->
+    <div v-if="!isEditing" class="session-fade" />
+
     <div class="session-actions" v-if="!isEditing">
       <button class="action-btn" @click.stop="handleEdit" aria-label="编辑标题">
-        <EditIcon />
+        <Pencil :size="14" :stroke-width="1.5" />
       </button>
-      <button class="action-btn action-btn--danger" @click.stop="handleDelete" aria-label="删除会话">
-        <TrashIcon />
+      <button class="action-btn action-btn--danger" @click.stop="showDeleteDialog = true" aria-label="删除会话">
+        <Trash2 :size="14" :stroke-width="1.5" />
       </button>
     </div>
     <div v-else class="session-edit-actions" @click.stop>
       <button class="edit-action-btn edit-action-btn--save" @click="handleSaveEdit" aria-label="保存">
-        <CheckIcon />
+        <Check :size="14" :stroke-width="2" />
       </button>
       <button class="edit-action-btn edit-action-btn--cancel" @click="handleCancelEdit" aria-label="取消">
-        <XIcon />
+        <X :size="14" :stroke-width="2" />
       </button>
     </div>
+
+    <ConfirmDialog
+      :visible="showDeleteDialog"
+      title="删除对话"
+      :message="`确定要删除 &quot;${session.title}&quot; 吗？`"
+      confirm-text="删除"
+      cancel-text="取消"
+      variant="danger"
+      @update:visible="showDeleteDialog = $event"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { Pencil, Trash2, Check, X } from 'lucide-vue-next'
+import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
 import type { SessionInfo } from '@/types/api'
 
 const props = defineProps<{
@@ -60,6 +77,8 @@ const emit = defineEmits<{
 
 const isEditing = ref(false)
 const editTitle = ref(props.session.title)
+const showDeleteDialog = ref(false)
+const editInputRef = ref<HTMLInputElement | null>(null)
 
 function handleClick() {
   if (!isEditing.value) {
@@ -71,9 +90,8 @@ async function handleEdit() {
   isEditing.value = true
   editTitle.value = props.session.title
   await nextTick()
-  const input = document.querySelector('.session-edit-input') as HTMLInputElement
-  input?.focus()
-  input?.select()
+  editInputRef.value?.focus()
+  editInputRef.value?.select()
 }
 
 async function handleSaveEdit() {
@@ -89,64 +107,8 @@ function handleCancelEdit() {
   editTitle.value = props.session.title
 }
 
-async function handleDelete() {
-  if (confirm(`删除 "${props.session.title}"?`)) {
-    emit('delete', props.session.session_id)
-  }
-}
-
-// SVG Icons — consistent 1.5px stroke
-const ChatIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-    </svg>
-  `,
-}
-
-const EditIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-    </svg>
-  `,
-}
-
-const TrashIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-      <polyline points="3 6 5 6 21 6"></polyline>
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-    </svg>
-  `,
-}
-
-const CheckIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-      <polyline points="20 6 9 17 4 12"></polyline>
-    </svg>
-  `,
-}
-
-const XIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-      <line x1="18" y1="6" x2="6" y2="18"></line>
-      <line x1="6" y1="6" x2="18" y2="18"></line>
-    </svg>
-  `,
+function confirmDelete() {
+  emit('delete', props.session.session_id)
 }
 </script>
 
@@ -154,36 +116,36 @@ const XIcon = {
 .session-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 8px 10px;
   cursor: pointer;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   transition: background-color var(--transition-fast) ease;
-  gap: 4px;
-  min-height: 40px;
+  gap: 0;
+  min-height: 36px;
+  position: relative;
+  overflow: hidden;
 }
 
 .session-item:hover {
-  background-color: var(--bg-sidebar-hover);
+  background-color: var(--hover-bg);
 }
 
 .session-item.active {
-  background-color: var(--bg-sidebar-active);
+  background-color: var(--hover-bg);
 }
 
 .session-content {
   display: flex;
   align-items: center;
-  gap: 8px;
   flex: 1;
   min-width: 0;
-  color: var(--text-sidebar-secondary);
-  transition: color var(--transition-fast) ease;
+  color: var(--text-sidebar);
+  overflow: hidden;
 }
 
-.session-item.active .session-content,
-.session-item:hover .session-content {
+.session-item.active .session-content {
   color: var(--text-sidebar);
+  font-weight: 500;
 }
 
 .session-title {
@@ -191,9 +153,35 @@ const XIcon = {
   color: inherit;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
   flex: 1;
-  line-height: 1.4;
+  line-height: 1.5;
+}
+
+/* Fade gradient to hide overflow text */
+.session-fade {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  background: linear-gradient(to left, var(--bg-sidebar) 0%, transparent 100%);
+  pointer-events: none;
+  transition: opacity var(--transition-fast) ease;
+}
+
+.session-item:hover .session-fade,
+.session-item:focus-within .session-fade {
+  width: 72px;
+  background: linear-gradient(to left, var(--bg-sidebar) 40%, transparent 100%);
+}
+
+/* Adjust fade for active item */
+.session-item.active .session-fade {
+  background: linear-gradient(to left, var(--bg-sidebar) 0%, transparent 100%);
+}
+
+.session-item.active:hover .session-fade {
+  background: linear-gradient(to left, var(--bg-sidebar) 40%, transparent 100%);
 }
 
 .session-edit {
@@ -204,11 +192,11 @@ const XIcon = {
 .session-edit-input {
   width: 100%;
   font-size: 0.8125rem;
-  padding: 4px 6px;
+  padding: 3px 6px;
   border: 1px solid var(--accent-color);
-  border-radius: 4px;
-  background-color: var(--bg-sidebar);
-  color: var(--text-sidebar);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   outline: none;
   font-family: inherit;
 }
@@ -220,10 +208,12 @@ const XIcon = {
 .session-actions {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   opacity: 0;
   transition: opacity var(--transition-fast) ease;
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .session-item:hover .session-actions,
@@ -235,26 +225,26 @@ const XIcon = {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   background: none;
   border: none;
-  color: var(--text-sidebar-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: color var(--transition-fast) ease,
               background-color var(--transition-fast) ease;
 }
 
 .action-btn:hover {
-  color: var(--text-sidebar);
-  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  background-color: var(--hover-bg);
 }
 
 .action-btn--danger:hover {
   color: var(--destructive);
-  background-color: rgba(248, 113, 113, 0.12);
+  background-color: rgba(239, 68, 68, 0.08);
 }
 
 .session-edit-actions {
@@ -267,13 +257,13 @@ const XIcon = {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: color var(--transition-fast) ease,
               background-color var(--transition-fast) ease;
 }
@@ -283,7 +273,7 @@ const XIcon = {
 }
 
 .edit-action-btn--save:hover {
-  background-color: rgba(16, 185, 129, 0.12);
+  background-color: rgba(16, 185, 129, 0.08);
 }
 
 .edit-action-btn--cancel {
@@ -291,6 +281,6 @@ const XIcon = {
 }
 
 .edit-action-btn--cancel:hover {
-  background-color: rgba(248, 113, 113, 0.12);
+  background-color: rgba(239, 68, 68, 0.08);
 }
 </style>

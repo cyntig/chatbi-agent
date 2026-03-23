@@ -3,7 +3,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUpdated, ref } from 'vue'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 
@@ -17,14 +17,27 @@ const md = new MarkdownIt({
   typographer: true,
   breaks: true,
   highlight: function (str: string, lang: string) {
+    const langLabel = lang ? `<span class="code-lang">${lang}</span>` : ''
+    const copyBtn = `<button class="code-copy-btn" onclick="(function(btn){var code=btn.closest('.code-block-wrapper').querySelector('code');navigator.clipboard.writeText(code.textContent);btn.textContent='已复制!';setTimeout(function(){btn.textContent='复制'},1500)})(this)" aria-label="复制代码">复制</button>`
+    const header = `<div class="code-block-header">${langLabel}${copyBtn}</div>`
+
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return `<pre class="hljs"><code>${hljs.highlight(str, { language: lang }).value}</code></pre>`
+        return `<div class="code-block-wrapper">${header}<pre class="hljs"><code>${hljs.highlight(str, { language: lang }).value}</code></pre></div>`
       } catch (__) {}
     }
-    return `<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre>`
+    return `<div class="code-block-wrapper">${header}<pre class="hljs"><code>${md.utils.escapeHtml(str)}</code></pre></div>`
   },
 })
+
+// Add loading="lazy" to all images
+const defaultImageRender = md.renderer.rules.image || function(tokens: any, idx: any, options: any, env: any, self: any) {
+  return self.renderToken(tokens, idx, options)
+}
+md.renderer.rules.image = function (tokens: any, idx: any, options: any, env: any, self: any) {
+  tokens[idx].attrSet('loading', 'lazy')
+  return defaultImageRender(tokens, idx, options, env, self)
+}
 
 const renderedHtml = computed(() => {
   if (!props.content) return ''
@@ -80,12 +93,59 @@ const renderedHtml = computed(() => {
   color: var(--text-primary);
 }
 
+.markdown-renderer :deep(.code-block-wrapper) {
+  position: relative;
+  margin: 0.625em 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.markdown-renderer :deep(.code-block-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background-color: var(--code-bg);
+  border-bottom: 1px solid var(--border-color);
+  min-height: 32px;
+}
+
+.markdown-renderer :deep(.code-lang) {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: lowercase;
+  font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+.markdown-renderer :deep(.code-copy-btn) {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color var(--transition-fast) ease,
+              border-color var(--transition-fast) ease;
+}
+
+.markdown-renderer :deep(.code-copy-btn:hover) {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
 .markdown-renderer :deep(pre) {
   padding: 1em;
   overflow: auto;
   background-color: var(--code-bg);
-  border-radius: 0.5rem;
-  margin: 0.625em 0;
+  margin: 0;
+}
+
+.markdown-renderer :deep(.code-block-wrapper pre) {
+  border-radius: 0;
 }
 
 .markdown-renderer :deep(pre code) {

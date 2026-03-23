@@ -8,48 +8,43 @@
   >
     <div v-if="!hasMessages" class="empty-state">
       <div class="empty-logo">
-        <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <rect width="48" height="48" rx="12" fill="var(--accent-subtle)"/>
-          <path d="M24 14v20M14 24h20" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round"/>
+        <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="56" height="56" rx="14" fill="url(#logo-gradient)"/>
+          <path d="M18 20h20M18 28h14M18 36h18" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="40" cy="36" r="4" fill="white" opacity="0.8"/>
+          <defs>
+            <linearGradient id="logo-gradient" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#2563EB"/>
+              <stop offset="1" stop-color="#60a5fa"/>
+            </linearGradient>
+          </defs>
         </svg>
       </div>
       <h2 class="empty-title">ChatBI</h2>
-      <p class="empty-subtitle">开始对话，探索你的数据</p>
-      <div class="empty-suggestions">
-        <button class="suggestion-card" type="button">
-          <span class="suggestion-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7" rx="1"></rect>
-              <rect x="14" y="3" width="7" height="7" rx="1"></rect>
-              <rect x="3" y="14" width="7" height="7" rx="1"></rect>
-              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
-            </svg>
-          </span>
-          <span class="suggestion-text">帮我分析销售数据趋势</span>
-        </button>
-        <button class="suggestion-card" type="button">
-          <span class="suggestion-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-            </svg>
-          </span>
-          <span class="suggestion-text">查询上月营收报告</span>
-        </button>
-        <button class="suggestion-card" type="button">
-          <span class="suggestion-icon" aria-hidden="true">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
-          <span class="suggestion-text">对比不同产品的表现</span>
-        </button>
-      </div>
+      <p class="empty-subtitle">使用自然语言，探索和分析你的数据</p>
     </div>
     <div v-else class="messages-wrapper">
-      <div class="messages-list">
+      <!-- Virtual scroll for large message lists -->
+      <div v-if="useVirtualScroll" class="messages-list messages-list--virtual" ref="virtualContainerRef">
+        <div :style="{ height: `${virtualTopPad}px` }" />
         <ChatMessage
-          v-for="message in messages"
+          v-for="(message, i) in visibleMessages"
+          :key="message.id"
+          :message="message"
+        />
+        <div :style="{ height: `${virtualBottomPad}px` }" />
+        <div v-if="isStreaming" class="streaming-indicator" role="status" aria-label="正在生成回复">
+          <div class="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      </div>
+      <!-- Normal rendering for small lists -->
+      <div v-else class="messages-list">
+        <ChatMessage
+          v-for="(message, index) in messages"
           :key="message.id"
           :message="message"
         />
@@ -66,25 +61,93 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick, computed, onMounted, onUnmounted } from 'vue'
 import { useChatStore } from '@/stores/chat'
 import { useSessionStore } from '@/stores/session'
 import ChatMessage from './ChatMessage.vue'
+
+const VIRTUAL_THRESHOLD = 50
+const ESTIMATED_ITEM_HEIGHT = 120 // average message height in px
+const BUFFER_SIZE = 10 // extra items above/below viewport
 
 const chatStore = useChatStore()
 const sessionStore = useSessionStore()
 
 const messagesContainer = ref<HTMLElement | null>(null)
+const virtualContainerRef = ref<HTMLElement | null>(null)
 
 const messages = computed(() => chatStore.messages)
 const isStreaming = computed(() => chatStore.isStreaming)
 const hasMessages = computed(() => chatStore.hasMessages)
+const useVirtualScroll = computed(() => messages.value.length > VIRTUAL_THRESHOLD)
+
+// Virtual scroll state
+const scrollTop = ref(0)
+const containerHeight = ref(0)
+
+const visibleRange = computed(() => {
+  if (!useVirtualScroll.value) return { start: 0, end: messages.value.length }
+  const totalItems = messages.value.length
+  const start = Math.max(0, Math.floor(scrollTop.value / ESTIMATED_ITEM_HEIGHT) - BUFFER_SIZE)
+  const visibleCount = Math.ceil(containerHeight.value / ESTIMATED_ITEM_HEIGHT) + BUFFER_SIZE * 2
+  const end = Math.min(totalItems, start + visibleCount)
+  return { start, end }
+})
+
+const visibleMessages = computed(() => {
+  const { start, end } = visibleRange.value
+  return messages.value.slice(start, end)
+})
+
+const virtualTopPad = computed(() => visibleRange.value.start * ESTIMATED_ITEM_HEIGHT)
+const virtualBottomPad = computed(() => {
+  const remaining = messages.value.length - visibleRange.value.end
+  return Math.max(0, remaining * ESTIMATED_ITEM_HEIGHT)
+})
+
+function onVirtualScroll() {
+  if (virtualContainerRef.value) {
+    scrollTop.value = virtualContainerRef.value.scrollTop
+  }
+}
+
+// Hide avatar for consecutive messages from the same role
+function shouldHideAvatar(index: number): boolean {
+  if (index === 0) return false
+  const prev = messages.value[index - 1]
+  const curr = messages.value[index]
+  return prev.role === curr.role
+}
+
+// For virtual scroll, compute based on absolute index
+function shouldHideAvatarVirtual(visibleIndex: number): boolean {
+  const absIndex = visibleRange.value.start + visibleIndex
+  if (absIndex === 0) return false
+  const prev = messages.value[absIndex - 1]
+  const curr = messages.value[absIndex]
+  return prev.role === curr.role
+}
 
 watch(
   () => messages.value.length,
   async () => {
     await nextTick()
     scrollToBottom()
+  }
+)
+
+// Streaming 过程中内容持续增长，监听最后一条消息的内容和事件变化
+watch(
+  () => {
+    const last = messages.value[messages.value.length - 1]
+    if (!last) return ''
+    return `${last.content?.length || 0}-${last.events?.length || 0}`
+  },
+  async () => {
+    if (isStreaming.value) {
+      await nextTick()
+      scrollToBottom()
+    }
   }
 )
 
@@ -96,10 +159,34 @@ watch(isStreaming, async () => {
 })
 
 function scrollToBottom() {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  const container = useVirtualScroll.value ? virtualContainerRef.value : messagesContainer.value
+  if (container) {
+    container.scrollTop = container.scrollHeight
   }
 }
+
+onMounted(() => {
+  if (virtualContainerRef.value) {
+    containerHeight.value = virtualContainerRef.value.clientHeight
+    virtualContainerRef.value.addEventListener('scroll', onVirtualScroll, { passive: true })
+  }
+})
+
+onUnmounted(() => {
+  virtualContainerRef.value?.removeEventListener('scroll', onVirtualScroll)
+})
+
+// Re-attach listener when switching to virtual mode
+watch(useVirtualScroll, async (val) => {
+  if (val) {
+    await nextTick()
+    if (virtualContainerRef.value) {
+      containerHeight.value = virtualContainerRef.value.clientHeight
+      virtualContainerRef.value.addEventListener('scroll', onVirtualScroll, { passive: true })
+      scrollToBottom()
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -109,6 +196,7 @@ function scrollToBottom() {
   display: flex;
   flex-direction: column;
   scroll-behavior: smooth;
+  min-height: 0;
 }
 
 /* Empty state */
@@ -127,7 +215,7 @@ function scrollToBottom() {
 }
 
 .empty-logo {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .empty-title {
@@ -145,73 +233,35 @@ function scrollToBottom() {
   line-height: 1.5;
 }
 
-.empty-suggestions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 24px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.suggestion-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: transparent;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  transition: background-color var(--transition-fast) ease,
-              border-color var(--transition-fast) ease,
-              box-shadow var(--transition-fast) ease;
-  font-size: 0.875rem;
-  font-family: inherit;
-  color: var(--text-primary);
-  text-align: left;
-  min-height: 48px; /* Touch target */
-  width: 100%;
-}
-
-.suggestion-card:hover {
-  background-color: var(--accent-subtle);
-  border-color: var(--accent-color);
-}
-
-.suggestion-card:active {
-  transform: scale(0.98);
-}
-
-.suggestion-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: var(--accent-subtle);
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-}
-
-.suggestion-text {
-  flex: 1;
-}
-
 /* Messages area */
 .messages-wrapper {
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  scroll-behavior: smooth;
 }
 
 .messages-list {
   display: flex;
   flex-direction: column;
-  max-width: 768px;
+  max-width: 900px;
   width: 100%;
   margin: 0 auto;
-  padding: 0 16px 24px;
+  padding: 0 32px 24px;
+}
+
+.messages-list--virtual {
+  flex: 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 767px) {
+  .messages-list {
+    padding: 0 12px 16px;
+  }
 }
 
 /* Streaming indicator */

@@ -21,8 +21,8 @@
           :aria-label="isStreaming ? '停止生成' : '发送消息'"
           @click="handleSend"
         >
-          <StopIcon v-if="isStreaming" />
-          <SendIcon v-else />
+          <Square v-if="isStreaming" :size="14" :stroke-width="0" fill="currentColor" />
+          <Send v-else :size="16" :stroke-width="2" />
         </button>
       </div>
       <p class="input-hint" aria-hidden="true">ChatBI 可能会犯错。请核查重要信息。</p>
@@ -35,6 +35,7 @@ import { ref, computed, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
 import { useSessionStore } from '@/stores/session'
+import { Send, Square } from 'lucide-vue-next'
 
 const route = useRoute()
 const chatStore = useChatStore()
@@ -86,27 +87,6 @@ function adjustHeight() {
     }
   })
 }
-
-// SVG Icons (consistent stroke weight)
-const SendIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-         aria-hidden="true">
-      <line x1="22" y1="2" x2="11" y2="13"></line>
-      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-    </svg>
-  `,
-}
-
-const StopIcon = {
-  template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-         fill="currentColor" aria-hidden="true">
-      <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-    </svg>
-  `,
-}
 </script>
 
 <style scoped>
@@ -120,6 +100,18 @@ const StopIcon = {
   max-width: 768px;
   margin: 0 auto;
   padding: 0 16px 16px;
+}
+
+@media (min-width: 1024px) {
+  .chat-input {
+    max-width: 896px;
+  }
+}
+
+@media (max-width: 767px) {
+  .chat-input {
+    padding: 0 12px 12px;
+  }
 }
 
 .input-container {
@@ -161,8 +153,8 @@ const StopIcon = {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   background-color: var(--bg-tertiary);
   color: var(--text-tertiary);
@@ -185,16 +177,23 @@ const StopIcon = {
 }
 
 .send-btn.active:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .send-btn.streaming {
   background-color: var(--text-primary);
   color: var(--bg-primary);
+  animation: pulse-subtle 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
 }
 
 .send-btn.streaming:hover {
   opacity: 0.85;
+  animation: none;
 }
 
 .send-btn:disabled {

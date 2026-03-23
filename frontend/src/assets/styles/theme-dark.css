@@ -1,15 +1,15 @@
 .dark {
-  --bg-primary: #1f2937;
-  --bg-secondary: #111827;
-  --bg-tertiary: #374151;
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --border-color: #374151;
-  --accent-color: #60a5fa;
-  --user-message-bg: #3b82f6;
-  --user-message-text: #ffffff;
-  --ai-message-bg: #374151;
-  --ai-message-text: #f9fafb;
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+  --accent-color: #3b82f6;
+  --user-message-bg: rgba(59, 130, 246, 0.08);
+  --user-message-text: #f1f5f9;
+  --ai-message-bg: #1e293b;
+  --ai-message-text: #f1f5f9;
 }
 
 .dark .message.user {
