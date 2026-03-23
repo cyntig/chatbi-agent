@@ -11,7 +11,12 @@
     @keydown.enter="handleClick"
   >
     <div class="session-content">
-      <div v-if="!isEditing" class="session-title" :title="session.title">{{ session.title }}</div>
+      <template v-if="!isEditing">
+        <div class="session-title" :title="session.title">{{ session.title }}</div>
+        <div v-if="session.updated_at" class="session-time" :title="formatDate(session.updated_at)">
+          {{ formatRelativeTime(session.updated_at) }}
+        </div>
+      </template>
       <div v-else class="session-edit" @click.stop>
         <input
           ref="editInputRef"
@@ -62,6 +67,7 @@ import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { Pencil, Trash2, Check, X } from 'lucide-vue-next'
 import ConfirmDialog from '@/components/common/ConfirmDialog.vue'
+import { formatRelativeTime, formatDate } from '@/utils/format'
 import type { SessionInfo } from '@/types/api'
 
 const props = defineProps<{
@@ -136,11 +142,12 @@ function confirmDelete() {
 
 .session-content {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   flex: 1;
   min-width: 0;
   color: var(--text-sidebar);
   overflow: hidden;
+  gap: 2px;
 }
 
 .session-item.active .session-content {
@@ -155,6 +162,13 @@ function confirmDelete() {
   overflow: hidden;
   flex: 1;
   line-height: 1.5;
+}
+
+.session-time {
+  font-size: 0.6875rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 /* Fade gradient to hide overflow text */

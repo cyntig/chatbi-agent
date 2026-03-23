@@ -81,10 +81,12 @@ const formattedOutput = computed(() => {
   border-radius: 0.625rem;
   overflow: hidden;
   background-color: var(--bg-primary);
+  display: inline-block;
+  max-width: 100%;
 }
 
 .tool-header {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
@@ -112,12 +114,12 @@ const formattedOutput = computed(() => {
 }
 
 .tool-name {
-  flex: 1;
   font-weight: 500;
   font-size: 0.8125rem;
   color: var(--text-primary);
   font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
   text-align: left;
+  white-space: nowrap;
 }
 
 .tool-chevron {

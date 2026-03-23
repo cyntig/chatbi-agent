@@ -70,7 +70,6 @@ function isLastGroup(index: number): boolean {
 }
 
 .tool-event {
-  display: block;
   margin: 0.25rem 0;
 }
 </style>
