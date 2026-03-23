@@ -20,8 +20,8 @@ export const sessionAPI = {
    * Get all sessions
    */
   async getSessions(): Promise<SessionInfo[]> {
-    const response = await api.get<{ sessions: SessionInfo[] }>('/api/chatbi/sessions')
-    return response.data.sessions
+    const response = await api.get<SessionInfo[]>('/api/chatbi/sessions')
+    return response.data
   },
 
   /**
@@ -36,8 +36,8 @@ export const sessionAPI = {
    * Create a new session
    */
   async createSession(title?: string): Promise<SessionInfo> {
-    const params = title ? { title } : undefined
-    const response = await api.post<SessionInfo>('/api/chatbi/sessions', null, { params })
+    const body = title ? { title } : {}
+    const response = await api.post<SessionInfo>('/api/chatbi/sessions', body)
     return response.data
   },
 
@@ -52,8 +52,8 @@ export const sessionAPI = {
    * Update session title
    */
   async updateSession(sessionId: string, newTitle: string): Promise<void> {
-    await api.patch(`/api/chatbi/sessions/${sessionId}`, null, {
-      params: { new_title: newTitle },
+    await api.patch(`/api/chatbi/sessions/${sessionId}`, {
+      new_title: newTitle,
     })
   },
 }

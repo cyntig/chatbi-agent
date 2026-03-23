@@ -40,9 +40,9 @@ if [ ! -f ".env" ]; then
 fi
 
 # 启动开发服务器
-echo "📍 前端地址: http://localhost:3000"
-echo "🔧 后端API: http://localhost:8000"
-echo "📚 API文档: http://localhost:8000/docs"
+echo "📍 前端地址: http://127.0.0.1:3000"
+echo "🔧 后端API: http://127.0.0.1:8000"
+echo "📚 API文档: http://127.0.0.1:8000/docs"
 echo ""
 echo "⏳ 正在启动开发服务器..."
 echo "💡 提示: 按 Ctrl+C 停止服务"

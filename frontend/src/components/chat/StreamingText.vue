@@ -1,7 +1,7 @@
 <template>
   <div class="streaming-text">
     <div class="content-text" v-html="renderedHtml"></div>
-    <span v-if="isStreaming" class="cursor">|</span>
+    <span v-if="isStreaming" class="cursor"></span>
   </div>
 </template>
 
@@ -49,7 +49,7 @@ const renderedHtml = computed(() => {
   font-family: inherit;
   margin: 0;
   padding: 0;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 /* Markdown styles */
@@ -59,79 +59,76 @@ const renderedHtml = computed(() => {
 .content-text :deep(h4),
 .content-text :deep(h5),
 .content-text :deep(h6) {
-  margin-top: 0.75em;
-  margin-bottom: 0.25em;
+  margin-top: 1em;
+  margin-bottom: 0.375em;
   font-weight: 600;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 
-.content-text :deep(h1) {
-  font-size: 1.5em;
-}
-
-.content-text :deep(h2) {
-  font-size: 1.25em;
-}
+.content-text :deep(h1) { font-size: 1.375em; }
+.content-text :deep(h2) { font-size: 1.2em; }
 
 .content-text :deep(p) {
-  margin-bottom: 0.5em;
+  margin-bottom: 0.625em;
 }
 
 .content-text :deep(code) {
-  padding: 0.2em 0.4em;
+  padding: 0.15em 0.35em;
   margin: 0;
-  font-size: 85%;
-  background-color: var(--bg-tertiary);
-  border-radius: 3px;
-  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.8125em;
+  background-color: var(--code-bg);
+  border-radius: 4px;
+  font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
 }
 
 .content-text :deep(pre) {
   padding: 1em;
   overflow: auto;
-  background-color: var(--bg-tertiary);
-  border-radius: 6px;
-  margin-bottom: 0.5em;
+  background-color: var(--code-bg);
+  border-radius: 0.5rem;
+  margin: 0.625em 0;
 }
 
 .content-text :deep(pre code) {
   padding: 0;
-  font-size: 100%;
+  font-size: 0.8125rem;
   background: transparent;
+  line-height: 1.5;
 }
 
 .content-text :deep(ul),
 .content-text :deep(ol) {
-  padding-left: 2em;
-  margin-bottom: 0.5em;
+  padding-left: 1.5em;
+  margin-bottom: 0.625em;
 }
 
 .content-text :deep(li) {
-  margin-bottom: 0.1em;
+  margin-bottom: 0.125em;
 }
 
 .content-text :deep(table) {
   border-collapse: collapse;
   width: 100%;
-  margin-bottom: 0.5em;
+  margin: 0.625em 0;
+  font-size: 0.875em;
 }
 
 .content-text :deep(th),
 .content-text :deep(td) {
-  padding: 0.5em;
+  padding: 0.5em 0.75em;
   border: 1px solid var(--border-color);
   text-align: left;
 }
 
 .content-text :deep(th) {
-  background-color: var(--bg-tertiary);
+  background-color: var(--code-bg);
   font-weight: 600;
 }
 
 .content-text :deep(blockquote) {
-  padding-left: 1em;
-  margin-left: 0;
-  border-left: 4px solid var(--border-color);
+  padding: 0.25em 1em;
+  margin: 0.625em 0;
+  border-left: 3px solid var(--accent-color);
   color: var(--text-secondary);
 }
 
@@ -146,8 +143,12 @@ const renderedHtml = computed(() => {
 
 .cursor {
   display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background-color: var(--text-primary);
   animation: blink 1s infinite;
-  margin-left: 2px;
+  margin-left: 1px;
+  vertical-align: text-bottom;
 }
 
 @keyframes blink {

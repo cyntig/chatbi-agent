@@ -5,6 +5,8 @@ Created by cyntig on 2026/03/19.
 """
 
 import uuid
+from typing import Optional
+from pydantic import BaseModel
 
 from fastapi import APIRouter, HTTPException
 from api.schemas import (
@@ -13,6 +15,14 @@ from api.schemas import (
 )
 from api.dependencies import get_session_manager
 from app.session_manager import SessionManager
+
+
+class CreateSessionRequest(BaseModel):
+    title: Optional[str] = None
+
+
+class UpdateSessionRequest(BaseModel):
+    new_title: str
 
 router = APIRouter()
 
@@ -31,17 +41,18 @@ async def get_session(session_id: str):
     return sm.get_session(session_id)
 
 @router.post("/api/chatbi/sessions", response_model=SessionInfoResponse)
-async def create_session(title: str="新对话"):
+async def create_session(request: CreateSessionRequest = None):
     """创建新会话"""
     sid = str(uuid.uuid4())
     sm: SessionManager = get_session_manager()
+    title = request.title if request and request.title else "新对话"
     return sm.create_session(sid, title)
 
 @router.patch("/api/chatbi/sessions/{session_id}")
-async def update_session(session_id: str, new_title: str) -> dict:
+async def update_session(session_id: str, request: UpdateSessionRequest) -> dict:
     """更新会话标题"""
     sm: SessionManager = get_session_manager()
-    success = sm.update_title(session_id, new_title)
+    success = sm.update_title(session_id, request.new_title)
     if not success:
         raise HTTPException(status_code=404, detail="会话不存在")
     return {"message": "更新成功"}

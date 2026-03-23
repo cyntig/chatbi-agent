@@ -1,12 +1,9 @@
 <template>
   <div class="app-layout">
-    <AppHeader />
-    <div class="app-body">
-      <Sidebar />
-      <main class="app-main">
-        <router-view />
-      </main>
-    </div>
+    <Sidebar />
+    <main class="app-main">
+      <router-view />
+    </main>
   </div>
 </template>
 
@@ -14,16 +11,13 @@
 import { onMounted } from 'vue'
 import { useSessionStore } from '@/stores/session'
 import { useThemeStore } from '@/stores/theme'
-import AppHeader from './AppHeader.vue'
 import Sidebar from './Sidebar.vue'
 
 const sessionStore = useSessionStore()
 const themeStore = useThemeStore()
 
 onMounted(async () => {
-  // Load sessions on mount
   await sessionStore.loadSessions()
-  // Apply theme
   themeStore.applyTheme(themeStore.theme)
 })
 </script>
@@ -31,15 +25,8 @@ onMounted(async () => {
 <style scoped>
 .app-layout {
   display: flex;
-  flex-direction: column;
   height: 100vh;
   width: 100vw;
-  overflow: hidden;
-}
-
-.app-body {
-  display: flex;
-  flex: 1;
   overflow: hidden;
 }
 
@@ -47,5 +34,6 @@ onMounted(async () => {
   flex: 1;
   overflow: hidden;
   position: relative;
+  background-color: var(--bg-primary);
 }
 </style>

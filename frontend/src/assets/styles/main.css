@@ -2,71 +2,147 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   ChatBI Design System (UI/UX Pro Max)
+   Style: Minimal Clean + Data-Dense Dashboard
+   Typography: Inter (heading) + Inter (body)
+   Color: Analytics Dashboard palette
+   ============================================ */
+
 :root {
-  /* Light theme variables */
+  /* --- Semantic Color Tokens (Light) --- */
   --bg-primary: #ffffff;
-  --bg-secondary: #f9fafb;
-  --bg-tertiary: #f3f4f6;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --border-color: #e5e7eb;
-  --accent-color: #3b82f6;
-  --user-message-bg: #3b82f6;
-  --user-message-text: #ffffff;
-  --ai-message-bg: #f3f4f6;
-  --ai-message-text: #111827;
+  --bg-secondary: #f7f7f8;
+  --bg-tertiary: #ececf1;
+  --bg-sidebar: #202123;
+  --bg-sidebar-hover: #2a2b32;
+  --bg-sidebar-active: #343541;
+  --text-primary: #343541;
+  --text-secondary: #6e6e80;
+  --text-tertiary: #8e8ea0;
+  --text-sidebar: #ececf1;
+  --text-sidebar-secondary: #8e8ea0;
+  --border-color: #e5e5e5;
+  --border-light: #f0f0f0;
+  --accent-color: #10a37f;
+  --accent-hover: #0d8a6a;
+  --accent-subtle: rgba(16, 163, 127, 0.08);
+  --user-message-bg: #f7f7f8;
+  --user-message-text: #343541;
+  --ai-message-bg: #ffffff;
+  --ai-message-text: #343541;
+  --input-bg: #ffffff;
+  --input-border: #d9d9e3;
+  --input-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  --input-shadow-focus: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --code-bg: #f7f7f8;
+  --destructive: #ef4444;
+  --destructive-hover: #dc2626;
+  --success: #10b981;
+  --scrollbar-thumb: #c5c5d2;
+  --scrollbar-track: transparent;
+  --focus-ring: rgba(16, 163, 127, 0.4);
+  --transition-fast: 150ms;
+  --transition-base: 200ms;
+  --transition-slow: 300ms;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
 .dark {
-  /* Dark theme variables */
-  --bg-primary: #1f2937;
-  --bg-secondary: #111827;
-  --bg-tertiary: #374151;
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --border-color: #374151;
-  --accent-color: #60a5fa;
-  --user-message-bg: #3b82f6;
-  --user-message-text: #ffffff;
-  --ai-message-bg: #374151;
-  --ai-message-text: #f9fafb;
+  /* --- Semantic Color Tokens (Dark) --- */
+  --bg-primary: #343541;
+  --bg-secondary: #444654;
+  --bg-tertiary: #40414f;
+  --bg-sidebar: #202123;
+  --bg-sidebar-hover: #2a2b32;
+  --bg-sidebar-active: #343541;
+  --text-primary: #ececf1;
+  --text-secondary: #c5c5d2;
+  --text-tertiary: #8e8ea0;
+  --text-sidebar: #ececf1;
+  --text-sidebar-secondary: #8e8ea0;
+  --border-color: #4e4f60;
+  --border-light: #565869;
+  --accent-color: #10a37f;
+  --accent-hover: #1a7f64;
+  --accent-subtle: rgba(16, 163, 127, 0.12);
+  --user-message-bg: #343541;
+  --user-message-text: #ececf1;
+  --ai-message-bg: #444654;
+  --ai-message-text: #ececf1;
+  --input-bg: #40414f;
+  --input-border: #565869;
+  --input-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  --input-shadow-focus: 0 2px 12px rgba(0, 0, 0, 0.25);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --code-bg: #2d2d3f;
+  --destructive: #f87171;
+  --destructive-hover: #ef4444;
+  --success: #34d399;
+  --scrollbar-thumb: #565869;
+  --scrollbar-track: transparent;
+  --focus-ring: rgba(16, 163, 127, 0.5);
 }
 
-* {
+/* --- Reset --- */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100%;
+}
+
+/* --- Base Typography --- */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
+    'Helvetica Neue', 'Arial', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 #app {
   width: 100%;
-  height: 100vh;
+  height: 100dvh; /* Use dvh for mobile viewport */
   overflow: hidden;
 }
 
-/* Custom scrollbar */
+/* --- Focus Styles (Accessibility §1) --- */
+:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Remove default focus for mouse users */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* --- Scrollbar --- */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 
@@ -74,11 +150,16 @@ body {
   background: var(--text-secondary);
 }
 
-/* Animations */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* --- Animations --- */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -87,18 +168,55 @@ body {
 }
 
 .fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn var(--transition-slow) ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 .pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* --- Reduced Motion (Accessibility §1) --- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Selection --- */
+::selection {
+  background-color: rgba(16, 163, 127, 0.2);
+}
+
+/* --- Utility: Screen reader only --- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

@@ -22,11 +22,9 @@ const chatStore = useChatStore()
 const sessionId = route.params.sessionId as string
 
 onMounted(async () => {
-  // Load session if it's not 'new'
   if (sessionId !== 'new') {
     try {
       await sessionStore.loadSession(sessionId)
-      // Load messages if available
       if (sessionStore.currentSession?.messages) {
         chatStore.setMessages(
           sessionStore.currentSession.messages.map((msg) => ({
@@ -39,18 +37,14 @@ onMounted(async () => {
       console.error('Failed to load session:', error)
     }
   } else {
-    // Create new session
     try {
       const newSession = await sessionStore.createSession('新对话')
-      // Navigate to new session
-      // Note: We might want to update the route here
     } catch (error) {
       console.error('Failed to create session:', error)
     }
   }
 })
 
-// Watch for route changes
 watch(
   () => route.params.sessionId,
   async (newSessionId) => {
@@ -80,5 +74,6 @@ watch(
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  background-color: var(--bg-primary);
 }
 </style>

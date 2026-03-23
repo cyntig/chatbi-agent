@@ -30,30 +30,22 @@ const props = defineProps<{
   isStreaming: boolean
 }>()
 
-/**
- * 将连续的文本事件合并为一组
- * 工具调用事件保持独立
- */
 const groupedEvents = computed(() => {
   const grouped: Array<MessageEvent | { type: 'text'; content: string }> = []
   let currentTextContent = ''
 
   for (const event of props.events) {
     if (event.type === 'text') {
-      // 合并连续的文本事件
       currentTextContent += event.content || ''
     } else if (event.type === 'tool') {
-      // 遇到工具调用，先保存之前的文本（如果有）
       if (currentTextContent) {
         grouped.push({ type: 'text', content: currentTextContent })
         currentTextContent = ''
       }
-      // 添加工具调用事件
       grouped.push(event)
     }
   }
 
-  // 保存最后的文本内容
   if (currentTextContent) {
     grouped.push({ type: 'text', content: currentTextContent })
   }
@@ -61,9 +53,6 @@ const groupedEvents = computed(() => {
   return grouped
 })
 
-/**
- * 判断是否为最后一组（用于流式渲染）
- */
 function isLastGroup(index: number): boolean {
   return index === groupedEvents.value.length - 1
 }
@@ -73,7 +62,7 @@ function isLastGroup(index: number): boolean {
 .message-events-renderer {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .text-event {
@@ -82,6 +71,6 @@ function isLastGroup(index: number): boolean {
 
 .tool-event {
   display: block;
-  margin-top: 0.5rem;
+  margin: 0.25rem 0;
 }
 </style>

@@ -119,11 +119,22 @@ class SessionManager:
     
 
     def get_session(self, session_id: str) -> Optional[dict]:
-        """获取指定会话的详细信息(含完整消息历史)"""
+        """获取指定会话的详细信息(含完整消息历史，过滤掉system消息)"""
         with self._lock:
             if session_id not in self._states:
                 return None
-            return self._states[session_id][-1]
+            latest_state = self._states[session_id][-1]
+            # 过滤掉 system prompt，不返回给前端展示
+            visible_messages = [
+                msg for msg in latest_state["messages"]
+                if msg.get("role") != "system"
+            ]
+            return {
+                "session_id": session_id,
+                "title": latest_state.get("title", ""),
+                "updated_at": latest_state["update_time"],
+                "messages": visible_messages
+            }
 
     def create_session(self, session_id: str, title: str) -> dict:
         """创建新会话"""
@@ -154,7 +165,7 @@ class SessionManager:
             self._save()
             return True
 
-    def delete_title(self, session_id: str) -> bool:
+    def delete_session(self, session_id: str) -> bool:
         """删除会话"""
         with self._lock:
             if session_id not in self._states:

@@ -2,32 +2,49 @@
   <div
     class="session-item"
     :class="{ active }"
+    role="button"
+    :tabindex="0"
+    :aria-current="active ? 'page' : undefined"
+    :aria-label="session.title"
     @click="handleClick"
+    @keydown.enter="handleClick"
   >
     <div class="session-content">
-      <div class="session-icon">
-        <MessageIcon />
-      </div>
-      <div class="session-info">
-        <div class="session-title">{{ session.title }}</div>
-        <div class="session-meta">
-          {{ formatDate(session.updated_at) }}
-        </div>
+      <ChatIcon />
+      <div v-if="!isEditing" class="session-title">{{ session.title }}</div>
+      <div v-else class="session-edit" @click.stop>
+        <input
+          ref="editInput"
+          v-model="editTitle"
+          class="session-edit-input"
+          aria-label="编辑会话标题"
+          @keyup.enter="handleSaveEdit"
+          @keyup.esc="handleCancelEdit"
+        />
       </div>
     </div>
-    <button
-      class="delete-btn"
-      @click.stop="handleDelete"
-      title="Delete session"
-    >
-      <TrashIcon />
-    </button>
+    <div class="session-actions" v-if="!isEditing">
+      <button class="action-btn" @click.stop="handleEdit" aria-label="编辑标题">
+        <EditIcon />
+      </button>
+      <button class="action-btn action-btn--danger" @click.stop="handleDelete" aria-label="删除会话">
+        <TrashIcon />
+      </button>
+    </div>
+    <div v-else class="session-edit-actions" @click.stop>
+      <button class="edit-action-btn edit-action-btn--save" @click="handleSaveEdit" aria-label="保存">
+        <CheckIcon />
+      </button>
+      <button class="edit-action-btn edit-action-btn--cancel" @click="handleCancelEdit" aria-label="取消">
+        <XIcon />
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { formatRelativeTime } from '@/utils/format'
 import type { SessionInfo } from '@/types/api'
 
 const props = defineProps<{
@@ -38,36 +55,96 @@ const props = defineProps<{
 const router = useRouter()
 const emit = defineEmits<{
   delete: [sessionId: string]
+  edit: [sessionId: string, newTitle: string]
 }>()
 
+const isEditing = ref(false)
+const editTitle = ref(props.session.title)
+
 function handleClick() {
-  router.push(`/chat/${props.session.session_id}`)
+  if (!isEditing.value) {
+    router.push(`/chat/${props.session.session_id}`)
+  }
+}
+
+async function handleEdit() {
+  isEditing.value = true
+  editTitle.value = props.session.title
+  await nextTick()
+  const input = document.querySelector('.session-edit-input') as HTMLInputElement
+  input?.focus()
+  input?.select()
+}
+
+async function handleSaveEdit() {
+  const newTitle = editTitle.value.trim()
+  if (newTitle && newTitle !== props.session.title) {
+    emit('edit', props.session.session_id, newTitle)
+  }
+  isEditing.value = false
+}
+
+function handleCancelEdit() {
+  isEditing.value = false
+  editTitle.value = props.session.title
 }
 
 async function handleDelete() {
-  if (confirm(`Delete "${props.session.title}"?`)) {
+  if (confirm(`删除 "${props.session.title}"?`)) {
     emit('delete', props.session.session_id)
   }
 }
 
-function formatDate(date: string): string {
-  return formatRelativeTime(date)
+// SVG Icons — consistent 1.5px stroke
+const ChatIcon = {
+  template: `
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  `,
 }
 
-// Icon components
-const MessageIcon = {
+const EditIcon = {
   template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
     </svg>
   `,
 }
 
 const TrashIcon = {
   template: `
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
       <polyline points="3 6 5 6 21 6"></polyline>
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    </svg>
+  `,
+}
+
+const CheckIcon = {
+  template: `
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  `,
+}
+
+const XIcon = {
+  template: `
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
   `,
 }
@@ -78,81 +155,142 @@ const TrashIcon = {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 8px 10px;
   cursor: pointer;
-  transition: background-color 0.2s;
-  border-bottom: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: background-color var(--transition-fast) ease;
+  gap: 4px;
+  min-height: 40px;
 }
 
 .session-item:hover {
-  background-color: var(--bg-tertiary);
+  background-color: var(--bg-sidebar-hover);
 }
 
 .session-item.active {
-  background-color: var(--bg-tertiary);
-  border-left: 3px solid var(--accent-color);
+  background-color: var(--bg-sidebar-active);
 }
 
 .session-content {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
   flex: 1;
   min-width: 0;
+  color: var(--text-sidebar-secondary);
+  transition: color var(--transition-fast) ease;
 }
 
-.session-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: var(--bg-primary);
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.session-info {
-  flex: 1;
-  min-width: 0;
+.session-item.active .session-content,
+.session-item:hover .session-content {
+  color: var(--text-sidebar);
 }
 
 .session-title {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
+  font-size: 0.8125rem;
+  color: inherit;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  flex: 1;
+  line-height: 1.4;
 }
 
-.session-meta {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin-top: 0.125rem;
+.session-edit {
+  flex: 1;
+  min-width: 0;
 }
 
-.delete-btn {
+.session-edit-input {
+  width: 100%;
+  font-size: 0.8125rem;
+  padding: 4px 6px;
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  background-color: var(--bg-sidebar);
+  color: var(--text-sidebar);
+  outline: none;
+  font-family: inherit;
+}
+
+.session-edit-input:focus {
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.session-actions {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 0.375rem;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: 0.375rem;
+  gap: 2px;
   opacity: 0;
-  transition: background-color 0.2s, opacity 0.2s;
+  transition: opacity var(--transition-fast) ease;
+  flex-shrink: 0;
 }
 
-.session-item:hover .delete-btn {
+.session-item:hover .session-actions,
+.session-item:focus-within .session-actions {
   opacity: 1;
 }
 
-.delete-btn:hover {
-  background-color: var(--bg-primary);
-  color: #ef4444;
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-sidebar-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color var(--transition-fast) ease,
+              background-color var(--transition-fast) ease;
+}
+
+.action-btn:hover {
+  color: var(--text-sidebar);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.action-btn--danger:hover {
+  color: var(--destructive);
+  background-color: rgba(248, 113, 113, 0.12);
+}
+
+.session-edit-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.edit-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color var(--transition-fast) ease,
+              background-color var(--transition-fast) ease;
+}
+
+.edit-action-btn--save {
+  color: var(--success);
+}
+
+.edit-action-btn--save:hover {
+  background-color: rgba(16, 185, 129, 0.12);
+}
+
+.edit-action-btn--cancel {
+  color: var(--destructive);
+}
+
+.edit-action-btn--cancel:hover {
+  background-color: rgba(248, 113, 113, 0.12);
 }
 </style>
