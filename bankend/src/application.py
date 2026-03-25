@@ -25,6 +25,7 @@ async def on_message(message: cl.Message):
 
 async def normal_run(user_message: cl.Message):
     tool_register = ToolRegister(ChartClient(), ChatBIClient())
+    
     llm_client = ChatOpenAI('moonshotai/Kimi-K2-Instruct-0905')
     user_prompt = user_message.content
     session_id = cl.user_session.get("id") or "default"

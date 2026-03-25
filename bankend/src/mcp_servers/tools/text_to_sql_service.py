@@ -109,7 +109,10 @@ class TextToSqlService:
                     'role': 'user',
                     'content': content
                 })
-                retry_n += 1            
+                retry_n += 1       
+
+        if not success: 
+            return data    
     
     
     @timer_wrapper(enabled=bool(os.environ['TIME_WRAPPER_ENABLED']))
